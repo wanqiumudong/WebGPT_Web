@@ -1,0 +1,172 @@
+.tcad {
+  width          : 100%;
+  height         : 100%;
+  overflow       : hidden;
+  display        : flex;
+  flex-direction : column;
+  justify-content: flex-start;
+  align-items    : center;
+  position       : relative;
+}
+
+.tcad-empty {
+  width          : 100%;
+  height         : 100%;
+  display        : flex;
+  flex-direction : column;
+  justify-content: center;
+  align-items    : center;
+}
+
+.tcad-title {
+  font-size  : 48px;
+  color      : #1888FF;
+  font-weight: 500;
+  text-align : center;
+  white-space: nowrap;
+  width      : 100%;
+  margin     : 0;
+  padding    : 0;
+}
+
+.tcad-question {
+  font-size  : 48px;
+  color      : #999999;
+  font-weight: 400;
+  margin-top : 20px;
+  text-align : center;
+  white-space: nowrap;
+  width      : 100%;
+  margin-left: 0;
+  margin-right: 0;
+  margin-top : 20px;
+}
+
+.tcad-intro {
+  font-size   : 18px;
+  line-height : 42px;
+  color       : #999;
+  width       : 440px;
+  margin-left: 10px;
+  text-align: left;
+}
+
+.tcad-info {
+  font-size   : 18px;
+  line-height : 42px;
+  color       : #999;
+  min-width   : 440px;
+  width       : auto;
+  padding-left: 12px;
+  white-space : nowrap;
+}
+
+.tcad-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+/* 确保所有按钮都有一致的高度 */
+.tcad-footer button,
+.tcad-footer .ant-btn {
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tcad-footer .ant-form {
+  display: flex;
+  align-items: center;
+}
+
+.devide-line {
+  width: 1px;
+  height: 25px;
+  border-right: 1px solid #EFEFEF;
+  margin: 0 16px;
+}
+
+.tcad-upload-img {
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+:global(.tcad-footer .ant-input) {
+  border: none !important;
+}
+
+.chat-message-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 16px;
+  overflow-y: auto;
+  padding-bottom: 70px;
+  scroll-behavior: smooth;
+}
+
+/* 自动滚动开关样式 */
+.auto-scroll-switch {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.auto-scroll-label {
+  margin-left: 4px;
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 实时RAG */
+.rag-selector {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+}
+
+.rag-selector .ant-dropdown-trigger {
+  display: flex;
+  align-items: center;
+}
+
+.auto-scroll-switch {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.auto-scroll-label {
+  margin-left: 4px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* 内容区域约束 */
+.message-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 添加外层容器 */
+.chat-message-container {
+  width: 100%;
+  height: calc(100% - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}

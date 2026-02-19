@@ -1,0 +1,97 @@
+/* 基础消息样式 */
+.chat-message {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.chat-message-right {
+  flex-direction: row-reverse;
+}
+
+/* 消息内容样式 */
+.message-content {
+  width: calc(100% - 160px);
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 8px 16px;
+  line-height: 24px;
+  color: #333333;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  position: relative;
+  min-height: 40px;
+}
+
+/* 特殊消息类型样式 */
+.message-img-content {
+  max-width: calc(100% - 160px);
+  width: auto;
+}
+
+.message-loading {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.message-file-content {
+  max-width: 80%;
+  padding: 12px 16px;
+}
+
+/* 消息内容包装器 */
+.message-content-wrapper {
+  display: inline;
+  width: 100%;
+}
+
+/* 消息文本内容 */
+.message-text-content {
+  width: 100%;
+  overflow-x: auto;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+}
+
+/* 文件消息样式 */
+.file-message-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  min-height: 24px !important;
+  box-sizing: border-box !important;
+}
+
+.file-message {
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: break-all !important;
+  padding: 4px 0 !important;
+}
+
+.file-actions {
+  display: flex;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.file-delete-btn {
+  color: #ff4d4f;
+}
+
+.file-delete-btn:hover {
+  color: #ff7875;
+}
+
+/* 加载状态 */
+.loading-message {
+  color: #888;
+  font-style: italic;
+}

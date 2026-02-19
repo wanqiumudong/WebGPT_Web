@@ -1,0 +1,116 @@
+.code-block-container {
+  margin: 12px 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  width: 100%;
+}
+
+/* 流式传输中的代码块样式 */
+.code-block-streaming {
+  border: 1px dashed #e1e4e8;
+  background-color: #f8f9fa;
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #f1f2f3;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.code-language {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.copy-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #1890ff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.copy-button:hover {
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+.copy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.code-block-content {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 4;
+  color: #333;
+  background-color: #f6f8fa;
+  max-width: 100%;
+  white-space: pre-wrap;  /* 使用pre-wrap代替pre，允许代码自动换行 */
+  word-break: break-word;
+  word-wrap: break-word;
+}
+
+.code-block-streaming .code-block-content {
+  background-color: #f8f9fa;
+}
+
+.code-block-content code {
+  font-family: inherit;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+/* 代码块内的闪烁光标 */
+.code-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #333;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 强制代码块垂直布局，防止水平排列 */
+.message-content {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 确保代码块占据全宽 */
+.code-block-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  margin: 12px 0;
+  display: block;
+}

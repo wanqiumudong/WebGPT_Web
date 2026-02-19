@@ -1,0 +1,21 @@
+.card {
+  display: flex;
+}
+
+.title {
+  width      : 96px;
+  height     : 33px;
+  font-size  : 24px;
+  color      : #1888FF;
+  font-weight: 500;
+}
+
+.content {
+  margin-left: 48px;
+  width      : 644px;
+  /* height  : 216px; */
+  font-size  : 14px;
+  color      : #666666;
+  line-height: 24px;
+  font-weight: 400;
+}

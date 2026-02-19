@@ -1,0 +1,131 @@
+/* RagManager Styles */
+.rag-manager-container {
+  width: 100%;
+  max-width: 1250px;
+  /* 添加自动居中的margin */
+  margin: 0 auto;
+  /* 保持适当的内边距 */
+  padding: 16px;
+}
+
+.rag-manager-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  /* 移除margin-left约束让卡片可以居中 */
+  width: 100%;
+}
+
+.rag-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.rag-manager-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.rag-manager-actions {
+  margin-top: 16px;
+}
+
+.config-selector-container {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.config-selector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.config-label {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.processing-container {
+  margin-bottom: 20px;
+  background: #f8f8f8;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.processing-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.document-details-modal .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .rag-manager-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .rag-manager-stats {
+    margin-bottom: 16px;
+  }
+  
+  .config-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .config-selector .ant-btn {
+    margin-top: 8px;
+    margin-left: 0 !important;
+  }
+}
+
+/* 添加宽屏适配 */
+@media (min-width: 1600px) {
+  .rag-manager-container {
+    max-width: 80%;
+  }
+}
+
+/* 文档显示的额外处理 */
+.ant-table-wrapper {
+  width: 100%;
+}
+
+/* 确保表格容器可以垂直滚动 */
+.ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* 固定表头 */
+.ant-table-thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: #fff;
+}
+
+/* 让文件列表卡片有足够高度 */
+.rag-manager-card {
+  height: auto;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.rag-manager-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}

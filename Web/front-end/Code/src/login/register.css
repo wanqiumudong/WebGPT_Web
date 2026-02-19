@@ -1,0 +1,60 @@
+/* register.css */
+
+.register-container {
+    display: flex;
+    flex-direction: column;
+  
+    height: 100vh;
+    background-image: url('./背景.jpg');
+    background-size: 100%;
+  }
+  
+  .register-container h2 {
+    margin-bottom: 15px;
+    font-size: 2vw;
+    margin-top: 25vh;
+    margin-left: 20vw;
+    color: #007bff;
+  }
+  
+  .register-container input {
+    margin-left: 15vw;
+    width: 20vw;
+    padding: 10px;
+    margin-bottom: 2.5vh;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  
+  .register-container input[type="text"],
+  .register-container input[type="password"] {
+    font-size: 14px;
+  }
+  
+  .register-container button {
+    margin-left: 15.5vw;
+    display: block;
+    width: 20vw;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .register-container button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Media Query for responsiveness */
+  @media (max-width: 400px) {
+    .register-container {
+      width: 100%;
+    }
+  }
+  
+  .error-message {
+    color: red;
+  }

@@ -1,0 +1,86 @@
+/* Login.css */
+.login-container {
+    display: flex;
+    flex-direction: column;
+
+    height: 100vh;
+    background-image: url('./背景2.jpg');
+    background-size: 100%;
+    
+  }
+  
+  .login-title {
+    margin-left: 38vw;
+
+    margin-top: 30vh;
+    font-size: 2.7vw;
+    margin-bottom: 20px;
+    color: #000000; /* 蓝色标题 */
+  }
+  
+  .login-form {
+    margin-left: 37vw;
+    width: 22vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.5); /* 半透明白色 */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 浅阴影效果 */
+}
+  
+  .login-form input {
+    padding: 15px;
+    margin: 5px 0;
+    width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .login-button {
+    padding: 10px 30px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .login-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px; /* 添加上边距 */
+  }
+  .register-button {
+  padding: 10px 30px;
+  background-color: #28a745; /* 绿色按钮背景 */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-left: 20px;
+}
+
+.register-button:hover {
+  background-color: #218838; /* 鼠标悬停时的绿色 */
+}
+.change-password-link {
+  margin-left: 1vw;
+  color: #007bff; /* 链接文字颜色 */
+  border-bottom: 1px solid #007bff; /* 添加下划线 */
+  cursor: pointer;
+  transition: color 0.3s; /* 鼠标悬停时修改文本颜色 */
+  font-size: 0.3vw;
+}
+
+.change-password-link:hover {
+  color: #0056b3; /* 鼠标悬停时的文本颜色 */
+}

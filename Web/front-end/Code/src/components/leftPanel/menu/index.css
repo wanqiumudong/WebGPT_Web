@@ -1,0 +1,43 @@
+/* 0423增加RAG module，height从296增加到336 */
+.left-menu {
+  width          : 60px;
+  height         : 336px;
+  background     : #FFFFFF;
+  box-shadow     : 1px 4px 12px 0px rgba(0, 0, 0, 0.2);
+  border-radius  : 12px;
+  margin         : 0 34px 0 60px;
+  display        : flex;
+  flex-direction : column;
+  align-items    : center;
+  justify-content: center;
+}
+
+.line {
+  width     : 32px;
+  height    : 1px;
+  border-top: 1px solid #EFEFEF;
+}
+
+.first {
+  margin: 13px 0 24px 0;
+}
+
+.last {
+  margin: 24px 0 16px 0;
+}
+
+.menu-list {
+  display        : flex;
+  flex-direction : column;
+  align-items    : center;
+  justify-content: center;
+  gap            : 24px;
+  width          : 100%;
+}
+
+.left-panel-user {
+  width          : 100%;
+  display        : flex;
+  justify-content: center;
+  cursor         : pointer;
+}

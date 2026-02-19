@@ -1,0 +1,14 @@
+# Copyright (C) 1994-2023 Synopsys Inc.
+# swbtree vV-2024.03, saved by gsub0
+
+# --- simulation flow
+sde sde "" {}
+sde ready "1" {1} R
+sdevice sdevice "" {}
+# --- variables
+# --- scenarios and parameter specs
+scenario default ready ""
+# --- simulation tree
+0 1 0 {} {default} 0
+1 2 1 {1} {default} 0
+2 3 2 {} {default} 0

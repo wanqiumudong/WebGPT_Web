@@ -1,0 +1,54 @@
+.class-item {
+  display   : flex;
+  height    : 46px;
+  width     : 50%;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(176, 214, 255, 0.4);
+}
+
+.class-index {
+  width          : 68px;
+  background     : rgba(176, 214, 255, 0.18);
+  height         : 46px;
+  line-height    : 46px;
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  border-left    : 1px solid rgba(176, 214, 255, 0.4);
+}
+
+.class-right {
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  padding        : 0 17px 0 12px;
+  flex           : 1;
+  cursor         : pointer;
+}
+
+.class-arrow {
+  background-image : url('../../assets/arrow.png');
+  background-repeat: no-repeat;
+  background-size  : contain;
+  width            : 20px;
+  height           : 20px;
+}
+
+.class-content {
+  width        : 196px;
+  overflow     : hidden;
+  text-overflow: ellipsis;
+  white-space  : nowrap;
+}
+
+.class-item:last-child {
+  border-bottom: 1px solid rgba(176, 214, 255, 0.4);
+}
+
+.class-item:nth-child(even) {
+  border-right: 1px solid rgba(176, 214, 255, 0.4);
+}
+
+.class-item:nth-child(15) {
+  border-bottom: 1px solid rgba(176, 214, 255, 0.4);
+}

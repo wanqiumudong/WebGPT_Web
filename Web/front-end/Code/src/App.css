@@ -1,0 +1,15 @@
+.App {
+  width:100vw;
+  display: flex;
+  flex-direction: column; /* 将子元素竖直排列 */
+  justify-content: center; /* 垂直居中对齐 */
+  align-items: center; /* 水平居中对齐 */
+}
+.chat-page-container{
+  width: 100vw;
+  height: 100vh;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}

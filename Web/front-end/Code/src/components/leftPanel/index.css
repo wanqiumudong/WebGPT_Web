@@ -1,0 +1,5 @@
+.left-panel {
+  width      : 180px;
+  display    : flex;
+  align-items: center;
+}
