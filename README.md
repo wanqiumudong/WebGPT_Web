@@ -1,29 +1,29 @@
 # Web-FabGPT
 
-Web-FabGPT is the current live semiconductor assistant stack built from:
+Web-FabGPT 是当前可运行的半导体智能助手系统，主要由以下部分组成：
 
-- React front-end
-- Java `gptserver` for sessions and messages
-- Java `user-manager` for login and user status
+- React 前端
+- Java `gptserver`，负责会话和消息
+- Java `user-manager`，负责登录和用户状态
 - MySQL
-- Python services for `chatbot`, `defect`, `litho`, `tcad`, `rag`, and `circuit`
+- Python 服务，包括 `chatbot`、`defect`、`litho`、`tcad`、`rag` 和 `circuit`
 
-The local mirror currently mixes API and local runtimes:
+当前本地镜像同时包含 API 服务和本地运行服务：
 
-- `chatbot` uses `SiliconFlow`
-- `litho` uses `SiliconFlow` for intent parsing and keeps local simulation and optimization kernels
-- `tcad` uses `ohmygpt` for LLM generation and local Sentaurus execution
-- `circuit` keeps a local image-analysis model path and also uses API follow-up routing in code
-- `defect` keeps its own local defect model stack
-- `rag` keeps its local text embedding and rerank stack
+- `chatbot` 使用 `SiliconFlow`
+- `litho` 使用 `SiliconFlow` 做意图解析，同时保留本地仿真和优化 kernel
+- `tcad` 使用 `ohmygpt` 做 LLM generation，并在本地执行 Sentaurus
+- `circuit` 保留本地图像分析模型路径，同时在代码中使用 API 做后续文本路由
+- `defect` 保留自己的本地缺陷检测模型栈
+- `rag` 保留本地 text embedding 和 rerank 栈
 
-This repository copy is the local editable and runnable mirror at `/data/yphu/Web-FabGPT`.
+这个仓库是 `/data/yphu/Web-FabGPT` 的本地可编辑、可运行镜像。
 
-The local mirror uses a dedicated local port family on `10.98.193.46`.
+本地镜像使用 `10.98.193.46` 上的一组专用端口。
 
-## Runtime Ports
+## 运行端口
 
-- `3000` web front-end, started manually with `npm start`
+- `3000` Web 前端，手动通过 `npm start` 启动
 - `4307` MySQL
 - `5101` chatbot
 - `5102` defect
@@ -34,29 +34,29 @@ The local mirror uses a dedicated local port family on `10.98.193.46`.
 - `5107` gptserver
 - `5108` user-manager
 
-## Current Workflow
+## 当前启动流程
 
-1. Start the web backend:
+1. 启动 Web 后端：
 
 ```bash
 cd /data/yphu/Web-FabGPT
 bash deploy.sh start
 ```
 
-2. Check backend status:
+2. 查看后端状态：
 
 ```bash
 bash deploy.sh status
 ```
 
-3. Start the front-end manually:
+3. 手动启动前端：
 
 ```bash
 cd /data/yphu/Web-FabGPT/Web/front-end/Code
 npm start
 ```
 
-4. Start LLM services one by one:
+4. 逐个启动 LLM 服务：
 
 ```bash
 cd /data/yphu/Web-FabGPT
@@ -68,15 +68,15 @@ bash scripts/llm/start_tcad.sh
 bash scripts/llm/start_circuit.sh
 ```
 
-5. Stop the web backend when needed:
+5. 需要时停止 Web 后端：
 
 ```bash
 bash deploy.sh stop
 ```
 
-## Manual Logs
+## 手动查看日志
 
-The six LLM services are tmux-based manual services. Use these commands for inspection:
+六个 LLM 服务通过 tmux 手动管理。可以使用下面的命令查看或控制：
 
 ```bash
 tmux ls
@@ -86,23 +86,23 @@ tmux attach -t RAG
 tmux kill-session -t circuit
 ```
 
-## Service Concurrency
+## 服务并发
 
-- `chatbot` is API-backed and does not consume local GPU for language generation.
-- `defect` is limited to one local model job at a time on `GPU4`.
-- `litho` uses SiliconFlow only for intent parsing. Local CPU jobs default to `2` concurrent workers, and `neural_ilt` is limited to one local GPU job on `GPU5`.
-- `tcad` uses `ohmygpt` for LLM generation, while local Sentaurus/agent execution is limited to `2` concurrent sessions. The same conversation is always serialized.
-- `circuit` uses a local image-analysis path plus API follow-up routing in code. Its local model path is currently started on `GPU4`.
-- `rag` supports concurrent task intake, but heavy ingestion is still constrained by its own runtime.
+- `chatbot` 由 API 支持，不消耗本地 GPU 做 language generation。
+- `defect` 限制为同一时间只运行一个本地模型任务，默认在 `GPU4` 上运行。
+- `litho` 只用 SiliconFlow 做意图解析。本地 CPU 任务默认并发数为 `2`，`neural_ilt` 默认限制为 `GPU5` 上一个本地 GPU 任务。
+- `tcad` 使用 `ohmygpt` 做 LLM generation，本地 Sentaurus / agent 执行限制为 `2` 个并发 session。同一个 conversation 会始终串行执行。
+- `circuit` 使用本地图像分析路径，并在代码中包含 API follow-up routing。本地模型路径当前默认在 `GPU4` 上启动。
+- `rag` 支持并发任务接入，但重型 ingestion 仍受自身 runtime 约束。
 
-## GPU Affinity
+## GPU 绑定
 
-- `circuit` defaults to `GPU4`
-- `defect` defaults to `GPU4`
-- `rag` defaults to `GPU5`
-- `litho neural_ilt` defaults to `GPU5`
+- `circuit` 默认使用 `GPU4`
+- `defect` 默认使用 `GPU4`
+- `rag` 默认使用 `GPU5`
+- `litho neural_ilt` 默认使用 `GPU5`
 
-You can override the defaults before startup:
+启动前可以通过环境变量覆盖默认配置：
 
 ```bash
 export WEB_FABGPT_RAG_GPU=5
@@ -113,7 +113,7 @@ export WEB_FABGPT_LITHO_GPU_WORKERS=1
 export WEB_FABGPT_TCAD_MAX_CONCURRENT=2
 ```
 
-The local mirror reads provider credentials from your shell environment. In the current mixed setup you typically need:
+本地镜像从 shell 环境变量读取 provider credentials。当前混合配置通常需要：
 
 ```bash
 export WEB_FABGPT_SILICONFLOW_API_KEY=...
@@ -122,26 +122,26 @@ export WEB_FABGPT_TEXT_MODEL=Qwen/Qwen2.5-72B-Instruct
 export WEB_FABGPT_VL_MODEL=Qwen/Qwen2.5-VL-72B-Instruct
 ```
 
-If `RAG` or `defect` is already running in tmux, kill that session before restarting with a new GPU assignment. Otherwise the old process will keep using its current card.
+如果 `RAG` 或 `defect` 已经在 tmux 中运行，修改 GPU 环境变量后需要先 kill 对应 session 再重新启动，否则旧进程仍会继续占用原来的 GPU。
 
-## Repository Map
+## 仓库结构
 
-- `Web/front-end/Code/`: React front-end
-- `Web/back-end/gptserver/`: session and message backend
-- `Web/back-end/user-management/`: login and user state backend
-- `Web/back-end/mysql/`: MySQL runtime
-- `LLM/chatbot/qwen2_api.py`: chatbot entry
-- `LLM/defect/code/web_demo.py`: defect entry
-- `LLM/litho/litho.py`: litho entry
-- `LLM/tcad_agent_core/web/tcad_web_adapter.py`: tcad entry
-- `LLM/rag/text_rag_service.py`: rag entry
-- `LLM/circuit/circuit.py`: circuit entry
-- `deploy.sh`: unified `start/status/stop` for `mysql + gptserver + user-manager`
-- `scripts/llm/`: the six manual LLM start scripts
+- `Web/front-end/Code/`：React 前端
+- `Web/back-end/gptserver/`：会话和消息后端
+- `Web/back-end/user-management/`：登录和用户状态后端
+- `Web/back-end/mysql/`：MySQL runtime
+- `LLM/chatbot/qwen2_api.py`：chatbot 入口
+- `LLM/defect/code/web_demo.py`：defect 入口
+- `LLM/litho/litho.py`：litho 入口
+- `LLM/tcad_agent_core/web/tcad_web_adapter.py`：tcad 入口
+- `LLM/rag/text_rag_service.py`：rag 入口
+- `LLM/circuit/circuit.py`：circuit 入口
+- `deploy.sh`：统一管理 `mysql + gptserver + user-manager` 的 `start/status/stop`
+- `scripts/llm/`：六个手动 LLM 启动脚本
 
-## Notes
+## 说明
 
-- `chatbot` is the runtime session name for the service previously called `qwen2`.
-- `LLM_bak_balance/` is historical backup content, not the active runtime path.
-- `circuit` currently starts from `LLM/circuit/local_models/global_step_700_actor/huggingface` and its code contains hybrid image-local plus text-API routing.
-- The deployment details live in [DEPLOY.md](/data/yphu/Web-FabGPT/DEPLOY.md).
+- `chatbot` 是之前称为 `qwen2` 的服务在 runtime 中的 session 名称。
+- `LLM_bak_balance/` 是历史备份内容，不是当前 active runtime path。
+- `circuit` 当前从 `LLM/circuit/local_models/global_step_700_actor/huggingface` 启动，代码中包含 image-local 和 text-API 混合路由。
+- 部署细节见 [DEPLOY.md](DEPLOY.md)。
