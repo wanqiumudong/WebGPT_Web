@@ -130,7 +130,7 @@ export WEB_FABGPT_VL_MODEL=Qwen/Qwen2.5-VL-72B-Instruct
 - `Web/back-end/gptserver/`：会话和消息后端
 - `Web/back-end/user-management/`：登录和用户状态后端
 - `Web/back-end/mysql/`：MySQL runtime
-- `LLM/chatbot/qwen2_api.py`：chatbot 入口
+- `LLM/chatbot/`：chatbot 入口目录
 - `LLM/defect/code/web_demo.py`：defect 入口
 - `LLM/litho/litho.py`：litho 入口
 - `LLM/tcad_agent_core/web/tcad_web_adapter.py`：tcad 入口
@@ -138,10 +138,3 @@ export WEB_FABGPT_VL_MODEL=Qwen/Qwen2.5-VL-72B-Instruct
 - `LLM/circuit/circuit.py`：circuit 入口
 - `deploy.sh`：统一管理 `mysql + gptserver + user-manager` 的 `start/status/stop`
 - `scripts/llm/`：六个手动 LLM 启动脚本
-
-## 说明
-
-- `chatbot` 是之前称为 `qwen2` 的服务在 runtime 中的 session 名称。
-- `LLM_bak_balance/` 是历史备份内容，不是当前 active runtime path。
-- `circuit` 当前从 `LLM/circuit/local_models/global_step_700_actor/huggingface` 启动，代码中包含 image-local 和 text-API 混合路由。
-- 部署细节见 [DEPLOY.md](DEPLOY.md)。
