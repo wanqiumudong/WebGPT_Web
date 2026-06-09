@@ -1,11 +1,11 @@
 import { fetchType } from '../../api/constant';
 import request from '../../utils/request';
+import { BACKEND_BASE_URL } from '../../config/endpoints';
 
-
-export const addSession = async (data, port) => {
+export const addSession = async (data) => {
     try {
         const response = await request({
-            baseUrl: 'http://10.98.64.22:8080',
+            baseUrl: BACKEND_BASE_URL,
             url: '/session/add',
             data,
             method: fetchType.post,
@@ -14,17 +14,21 @@ export const addSession = async (data, port) => {
             }
         });
 
-        // 检查后端返回的状态码，如果是 201 则正常返回内容
-        if (response === 201) {
-            return response;
-        } else {
-            // 其他非 201 的状态码，可以根据需要自定义处理
-            return `请求失败，状态码: ${response.status}`;
+        // request() 可能返回数字状态码，或JSON对象
+        if (response === 200 || response === 201) {
+            return { success: true };
         }
-    } catch (e) {
-        // 错误捕获
-        console.error(e);  // 输出错误以便调试
-        return '后端算法还在优化中哦';
-    }
-}
 
+        if (response && typeof response === 'object') {
+            if (response.success === true || response.sessionId || response.session_id) {
+                return response;
+            }
+        }
+
+        console.error('addSession failed:', response);
+        return null;
+    } catch (e) {
+        console.error(e);  // 输出错误以便调试
+        return null;
+    }
+};

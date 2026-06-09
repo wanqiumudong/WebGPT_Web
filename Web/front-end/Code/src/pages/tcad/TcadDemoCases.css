@@ -1,0 +1,141 @@
+.tcad-demo-cases {
+  width: min(1180px, 100%);
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tcad-demo-cases-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5f7b95;
+}
+
+.tcad-demo-cases-header {
+  border: 1px solid rgba(31, 111, 235, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(58, 148, 255, 0.16), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 250, 255, 0.98) 100%);
+  box-shadow: 0 26px 56px rgba(16, 61, 117, 0.08);
+  padding: 28px 30px;
+}
+
+.tcad-demo-cases-kicker {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2f66aa;
+  font-weight: 700;
+}
+
+.tcad-demo-cases-title {
+  margin-top: 10px;
+  font-size: 28px;
+  line-height: 1.28;
+  font-weight: 700;
+  color: #112a46;
+}
+
+.tcad-demo-cases-subtitle {
+  margin-top: 12px;
+  max-width: 920px;
+  color: #526980;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.tcad-demo-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tcad-demo-card {
+  border: 1px solid #dce9f8;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(89, 160, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  box-shadow: 0 18px 40px rgba(15, 60, 110, 0.06);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 100%;
+}
+
+.tcad-demo-card-step {
+  font-size: 12px;
+  font-weight: 700;
+  color: #3577c8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tcad-demo-card-title {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #17304c;
+}
+
+.tcad-demo-card-summary {
+  color: #4d6379;
+  font-size: 14px;
+  line-height: 1.85;
+  min-height: 106px;
+}
+
+.tcad-demo-card-meta,
+.tcad-demo-reference-list,
+.tcad-demo-artifact-list,
+.tcad-demo-capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tcad-demo-capability-chip,
+.tcad-demo-reference-chip,
+.tcad-demo-artifact-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #edf5ff;
+  color: #284b71;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tcad-demo-reference-block,
+.tcad-demo-artifact-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tcad-demo-reference-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #597490;
+}
+
+.tcad-demo-card-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 1180px) {
+  .tcad-demo-cases-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tcad-demo-card-summary {
+    min-height: auto;
+  }
+}

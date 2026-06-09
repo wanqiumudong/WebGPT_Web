@@ -8,29 +8,32 @@ import ImageBot from '../../pages/fab/fabGPT';
 import ClassIntroduce from '../../pages/classIntroduce/index';
 import CircuitThink from '../../pages/CircuitThink/index';
 import RagManager from '../RagManager';
+import { SERVICE_PORTS } from '../../config/endpoints';
 
 function Container() {
   const mainPage = useSelector((state) => state.PageState.Main_Page);
   const subPage = useSelector((state) => state.PageState.Sub_Page);
-  const currentUser = Cookies.get('user') || 'admin';
+  const rawUser = Cookies.get('user');
+  const normalizedUser = rawUser && rawUser !== 'undefined' && rawUser !== 'null' ? rawUser : '';
+  const currentUser = normalizedUser || 'default';
 
   return (
     <div className='container'>
       <div className='root-container'>
         {mainPage === 'ClassIntroduce' && <ClassIntroduce />}
-        {mainPage === 'ChatBot' && subPage === "ChatBot" && <Chatbot port="5002" />}
+        {mainPage === 'ChatBot' && subPage === "ChatBot" && <Chatbot port={SERVICE_PORTS.CHATBOT} />}
 
         {mainPage === 'FabGPT' &&
           <>
             {subPage === "issue" && <ImageBot />}
-            {subPage === "lithgraphy" && <GuangkeBot port="5003" />}
-            {subPage === "tcad" && <TCAD port="5004" />}
-            {subPage === "circuit" && <CircuitThink port="5007" />}
+            {subPage === "lithgraphy" && <GuangkeBot />}
+            {subPage === "tcad" && <TCAD port={SERVICE_PORTS.TCAD} />}
+            {subPage === "circuit" && <CircuitThink port={SERVICE_PORTS.CIRCUIT} />}
           </>
         }
 
         {mainPage === 'RagManager' && (
-          <RagManager port="5100" userId={currentUser} />
+          <RagManager port={SERVICE_PORTS.RAG_MANAGER} userId={currentUser} />
         )}
       </div>
     </div>

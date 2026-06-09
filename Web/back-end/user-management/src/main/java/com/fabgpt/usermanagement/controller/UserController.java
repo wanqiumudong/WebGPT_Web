@@ -29,7 +29,11 @@ public class UserController {
                 if (user.isValid()) {
                     Map<String, Object> response = new HashMap<>();
                     response.put("message", "登录成功");
+                    response.put("userId", user.getUserId());
                     response.put("username", user.getUsername());
+                    response.put("status", user.getStatus());
+                    response.put("expired", user.isExpired());
+                    response.put("valid", user.isValid());
                     response.put("expireDate", user.getExpireDate() != null ? user.getExpireDate().toString() : "永久有效");
                     return ResponseEntity.ok().body(response);
                 } else if (user.isExpired()) {

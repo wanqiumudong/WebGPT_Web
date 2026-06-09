@@ -1,0 +1,85 @@
+{
+  "source_dir": "/data/yphu/TCAD_Agent/doc/tutorials",
+  "generated_at": "2026-02-26",
+  "documents": [
+    {
+      "file": "01_TCAD_laboratory_Introduction_GBB.pdf",
+      "type": "theory",
+      "tasks": [
+        "理解TCAD课程背景、Process TCAD与Device TCAD区别、建模目的与评价标准",
+        "理解课程环境和资源入口（仅阅读，不要求器件复现实验）"
+      ]
+    },
+    {
+      "file": "02_TCAD_laboratory_A_simulation_primer_GBB.pdf",
+      "type": "theory",
+      "tasks": [
+        "理解Quasistationary/Transient/ACCoupled的应用条件",
+        "理解1D/2D/3D域简化、Newton/Gummel与网格收敛检查（仅阅读）"
+      ]
+    },
+    {
+      "file": "03_TCAD_laboratory_Overview_of_Synopsys_Sentaurus_TCAD_GBB.pdf",
+      "type": "theory+workflow",
+      "tasks": [
+        "理解Sentaurus工具链与仿真流程（pre/process/post）",
+        "理解SWB基础操作和术语（仅阅读+流程映射）"
+      ]
+    },
+    {
+      "file": "04_TCAD_laboratory_pn_junction_GBB.pdf",
+      "type": "hands_on",
+      "tasks": [
+        "构建理想pn结（abrupt），完成SDE网格并导出结构图",
+        "构建SDevice命令（含SRH开关、V_start/V_stop扫描），完成仿真",
+        "导出并对比：平衡/正偏/反偏能带图、掺杂cutline、电场/电势图、IV半对数曲线",
+        "完成扩展实验：SRH对比、高掺杂阈值变化、Si/Ge/GaAs材料对比、均匀掺杂电阻器对比"
+      ]
+    },
+    {
+      "file": "05_TCAD_laboratory_integrated_diode_GBB.pdf",
+      "type": "hands_on",
+      "tasks": [
+        "构建集成二极管结构（substrate+pwell+nwell+oxide+ohmic重掺+高斯平滑），并导出结构图",
+        "完成SDevice（SRH+Band2Band）反偏/正偏扫描仿真",
+        "导出并对比：掺杂剖面、IV曲线、反偏能带图、Band2BandGeneration分布"
+      ]
+    },
+    {
+      "file": "06_TCAD_laboratory_MOSFET_GBB-SC_20150529H1917.pdf",
+      "type": "hands_on",
+      "tasks": [
+        "构建2D MOSFET半结构并用TDX镜像生成全结构，导出结构图",
+        "完成两套SDevice：turn_on_des(Id-Vg) 与 output_des(Id-Vd)",
+        "完成参数树实验：Lg/Tox/SubDop扫描",
+        "导出并对比：平衡能带、反型层电子分布、Id-Vg/Id-Vd及参数影响曲线"
+      ]
+    },
+    {
+      "file": "23M1135_Deep_Assignment_5.pdf",
+      "type": "assignment",
+      "tasks": [
+        "Q1: N型Si条形电阻，三种迁移率模型（constant/doping/high-field）下结构、平衡能带、IV",
+        "Q2: P型电阻，ohmic-ohmic与ohmic-schottky接触对比，结构、平衡能带、IV",
+        "Q3: 两端NPN样式器件，结构/掺杂/空间电荷/电场/电势/能带（平衡与-0.5V偏置）"
+      ]
+    },
+    {
+      "file": "23M1135_Assignment6.pdf",
+      "type": "assignment",
+      "tasks": [
+        "Q1: PN结在SRH与Band2Band模型下IV（-10V~2V）及参数扫（寿命、掺杂）",
+        "Q2: MOSCAP在Vg=Vt时的能带与电子/空穴分布（tox、NA变化）",
+        "Q3: MOSCAP 100kHz C-V（SiO2/HfO2/EOT对比）"
+      ]
+    },
+    {
+      "file": "ECE335_Project_2.pdf",
+      "type": "project",
+      "tasks": [
+        "复现深亚微米NMOS设计流程：SubDop/HaloDop/ExtDop调优满足Ion/Ioff目标",
+        "导出并对比：默认与最终2D掺杂图、Id-Vg线性/饱和、Id-Vd输出特性"
+      ]
+    }
+  ]
+}

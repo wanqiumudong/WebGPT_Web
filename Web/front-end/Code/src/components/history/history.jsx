@@ -1,26 +1,32 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { Input } from "antd";
+import { Input, Modal, message } from "antd";
 import { DeleteOutlined, EditOutlined, MoreOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { addSession } from "./api";
 import { getHistorySession } from "./api";
 import { format } from "date-fns";
 import Cookies from "js-cookie";
+import { BACKEND_BASE_URL, TCAD_BASE_URL } from "../../config/endpoints";
 
 const Container = styled.div`
   width: 240px;
   height: 100%;
+  min-height: 0;
   margin-left: 40px;
   box-shadow: 1px 4px 12px 0px rgba(0, 0, 0, 0.2);
   padding: 16px;
   background-color: #fafafa;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
 `;
 
 const ScrollableArea = styled.div`
   flex: 1;
+  min-height: 0;
   overflow-y: auto; /* 添加垂直滚动条 */
   padding-right: 8px; /* 为滚动条留出空间 */
 `;
@@ -248,7 +254,7 @@ export const History = ({ modelId }) => {
   async function fetchData(modelId) {
     try {
       const response = await fetch(
-        `http://10.98.64.22:8080/session/get-by-user-model?username=${userCookie}&modelId=${modelId}`,
+        `${BACKEND_BASE_URL}/session/get-by-user-model?username=${userCookie}&modelId=${modelId}`,
         {
           method: "GET",
         }
@@ -266,7 +272,7 @@ export const History = ({ modelId }) => {
   async function fetchData_chat(modelId) {
     try {
       const response = await fetch(
-        `http://10.98.64.22:8080/session/get-by-user-model?username=${userCookie}&modelId=${modelId}`,
+        `${BACKEND_BASE_URL}/session/get-by-user-model?username=${userCookie}&modelId=${modelId}`,
         {
           method: "GET",
         }
@@ -350,7 +356,7 @@ export const History = ({ modelId }) => {
   async function checkSessionContent(sessionId) {
     try {
       const response = await fetch(
-        `http://10.98.64.22:8080/message/list-by-session?sessionId=${sessionId}`
+        `${BACKEND_BASE_URL}/message/list-by-session?sessionId=${sessionId}`
       );
       if (response.ok) {
         const messages = await response.json();
@@ -366,7 +372,7 @@ export const History = ({ modelId }) => {
   async function createRealSessionAfterChat() {
     try {
       const response = await fetch(
-        `http://10.98.64.22:8080/user/get-by-name?username=${userCookie}`
+        `${BACKEND_BASE_URL}/user/get-by-name?username=${userCookie}`
       );
       if (response.ok) {
         const userData = await response.json();
@@ -384,7 +390,11 @@ export const History = ({ modelId }) => {
         };
 
         const addResponse = await addSession(newSession);
-        if (addResponse) {
+        const addOk = !!(
+          addResponse &&
+          (addResponse.success === true || addResponse.sessionId || addResponse.session_id)
+        );
+        if (addOk) {
           // 更新cookie为真实的sessionId
           if (modelId == 5) {
             Cookies.set('circuit_5', newSession.sessionId, { expires: 7 });
@@ -413,14 +423,29 @@ export const History = ({ modelId }) => {
 
   const deleteSession = async (sessionId) => {
     try {
+      if (modelId === 3) {
+        const cleanupResponse = await fetch(`${TCAD_BASE_URL}/delete_session_runtime`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userCookie,
+            conversation_id: sessionId,
+          }),
+        });
+        if (!cleanupResponse.ok) {
+          throw new Error("Failed to cleanup TCAD session runtime");
+        }
+      }
       const response_1 = await fetch(
-        `http://10.98.64.22:8080/message/delete-by-session?sessionId=${sessionId}`,
+        `${BACKEND_BASE_URL}/message/delete-by-session?sessionId=${sessionId}`,
         {
           method: "GET",
         }
       );
       const response_2 = await fetch(
-        `http://10.98.64.22:8080/session/delete?sessionId=${sessionId}`,
+        `${BACKEND_BASE_URL}/session/delete?sessionId=${sessionId}`,
         {
           method: "GET",
         }
@@ -462,7 +487,23 @@ export const History = ({ modelId }) => {
       }
     } catch (err) {
       setError(err);
+      message.error("删除对话失败，请稍后重试");
     }
+  };
+
+  const confirmDeleteSession = (sessionId, header) => {
+    const title = modelId === 3 ? '确认删除TCAD对话' : '确认删除对话';
+    const content = modelId === 3
+      ? `确定要删除对话“${header}”吗？对应历史记录和TCAD会话工作区文件将一并清理，此操作不可恢复。`
+      : `确定要删除对话“${header}”吗？此操作不可恢复。`;
+    Modal.confirm({
+      title,
+      content,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => deleteSession(sessionId),
+    });
   };
 
   // 重命名会话
@@ -481,7 +522,7 @@ export const History = ({ modelId }) => {
         header: truncatedTitle
       };
 
-      const response = await fetch("http://10.98.64.22:8080/session/update", {
+      const response = await fetch(`${BACKEND_BASE_URL}/session/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedSession),
@@ -619,7 +660,7 @@ export const History = ({ modelId }) => {
                         className="danger"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteSession(item.sessionId);
+                          confirmDeleteSession(item.sessionId, item.header);
                         }}
                       >
                         <DeleteOutlined />
@@ -647,7 +688,7 @@ export const createRealSessionAfterChat = async (modelId) => {
   
   try {
     const response = await fetch(
-      `http://10.98.64.22:8080/user/get-by-name?username=${userCookie}`
+      `${BACKEND_BASE_URL}/user/get-by-name?username=${userCookie}`
     );
     if (response.ok) {
       const userData = await response.json();
@@ -665,7 +706,11 @@ export const createRealSessionAfterChat = async (modelId) => {
       };
 
       const addResponse = await addSession(newSession);
-      if (addResponse) {
+      const addOk = !!(
+        addResponse &&
+        (addResponse.success === true || addResponse.sessionId || addResponse.session_id)
+      );
+      if (addOk) {
         // 更新cookie为真实的sessionId
         if (modelId == 5) {
           Cookies.set('circuit_5', newSession.sessionId, { expires: 7 });

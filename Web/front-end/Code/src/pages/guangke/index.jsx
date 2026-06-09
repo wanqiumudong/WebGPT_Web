@@ -2,15 +2,44 @@ import './index.css';
 import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { Button, Form, Input, message, Upload } from 'antd';
 import Cookies from 'js-cookie';
-import { fetchChatBot, uploadFile, fetchChatBotStreaming } from '../../api/chatBot';
+import { uploadLithoFile, fetchLithoStreaming } from '../../api/lithoApi';
 import { MESSAGE_TYPE } from '../../constants';
 import ChatMessage from '../../components/chatMessage';
-import { botInfo } from '../../constants';
 import { CloudUploadOutlined, LoadingOutlined, DownloadOutlined } from '@ant-design/icons';
 // 导入默认会话相关函数
-import { DEFAULT_SESSION, createRealSessionAfterChat, isDefaultSession } from '../../components/history/history';
+import { DEFAULT_SESSION, createRealSessionAfterChat } from '../../components/history/history';
+import { BACKEND_BASE_URL, CIRCUIT_BASE_URL, LITHO_BASE_URL } from '../../config/endpoints';
 
-const Chatbot = ({ port }) => {
+const normalizeLithoAssetUrl = (assetUrl) => {
+  if (!assetUrl || typeof assetUrl !== 'string') {
+    return assetUrl;
+  }
+
+  return assetUrl
+    .replace(/https?:\/\/[^/]+\/static\/output\//g, `${LITHO_BASE_URL}/static/output/`)
+    .replace(/https?:\/\/[^/]+\/static\/upload\//g, `${LITHO_BASE_URL}/static/upload/`);
+};
+
+const normalizeLithoMessageContent = (content) => {
+  if (typeof content !== 'string') {
+    return content;
+  }
+
+  return normalizeLithoAssetUrl(content);
+};
+
+const normalizeLithoMessage = (message) => {
+  if (!message) {
+    return message;
+  }
+
+  return {
+    ...message,
+    content: normalizeLithoMessageContent(message.content)
+  };
+};
+
+const Chatbot = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -20,6 +49,8 @@ const Chatbot = ({ port }) => {
   const [fileList, setFileList] = useState([]);
   const [sessionId, setSessionId] = useState(Cookies.get(2));
   const [streamConnection, setStreamConnection] = useState(null);
+  const apiBaseUrl = BACKEND_BASE_URL;
+  const titleBaseUrl = CIRCUIT_BASE_URL;
   
   // 使用 ref 跟踪流式消息索引
   const streamingBotMsgRef = useRef(null);
@@ -38,10 +69,13 @@ const Chatbot = ({ port }) => {
 
   useEffect(() => {
     if (sessionId && sessionId !== DEFAULT_SESSION) {
-      fetch(`http://10.98.64.22:8080/message/list-by-session?sessionId=${sessionId}`)
+      fetch(`${apiBaseUrl}/message/list-by-session?sessionId=${sessionId}`)
         .then(response => response.json())
         .then(data => {
-          setMessages(data);
+          const normalizedMessages = Array.isArray(data)
+            ? data.map(normalizeLithoMessage)
+            : [];
+          setMessages(normalizedMessages);
         })
         .catch(error => {
           console.error("Error fetching messages by session:", error);
@@ -76,7 +110,7 @@ const Chatbot = ({ port }) => {
       }
       
       // 获取消息 ID
-      const messageListResponse = await fetch("http://10.98.64.22:8080/message/list-all");
+      const messageListResponse = await fetch(`${apiBaseUrl}/message/list-all`);
       const allMessages = await messageListResponse.json();
       const maxMessageId = allMessages.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
       
@@ -92,7 +126,7 @@ const Chatbot = ({ port }) => {
       };
       
       // 保存用户消息到数据库
-      await fetch("http://10.98.64.22:8080/message/add", {
+      await fetch(`${apiBaseUrl}/message/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userMessage),
@@ -124,20 +158,20 @@ const Chatbot = ({ port }) => {
       
       // 连接流式 API
       const params = { user_id: username, message: values.content };
-      const connection = fetchChatBotStreaming(
+      const connection = fetchLithoStreaming(
         params,
-        port,
         // 数据回调
         (data) => {
           if (data && data.chunk !== undefined) {
             accumulatedContent += data.chunk;
+            const normalizedContent = normalizeLithoMessageContent(accumulatedContent);
             
             setMessages(prev => {
               const updated = [...prev];
               if (updated[botMessageIndex]) {
                 updated[botMessageIndex] = {
                   ...updated[botMessageIndex],
-                  content: accumulatedContent,
+                  content: normalizedContent,
                 };
               }
               return updated;
@@ -146,108 +180,110 @@ const Chatbot = ({ port }) => {
         },
         // 完成回调
         async () => {
-          setLoading(false);
-          
-          setMessages(prev => {
-            const updated = [...prev];
-            if (updated[botMessageIndex]) {
-              updated[botMessageIndex] = {
-                ...updated[botMessageIndex],
-                streaming: false,
-              };
-            }
-            return updated;
-          });
-          
-          // 保存完整 Bot 消息
-          const completeBotMessage = {
-            content: accumulatedContent,
-            messageId: maxMessageId + 2,
-            modelId: 2,
-            sessionId: actualSessionId,
-            timestamp: new Date().toISOString(),
-            userId: userId,
-            userType: MESSAGE_TYPE.BOT,
-          };
-          
-          await fetch("http://10.98.64.22:8080/message/add", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(completeBotMessage),
-          });
-
-          // 生成并更新会话标题
           try {
-            const sessionResponse = await fetch(`http://10.98.64.22:8080/session/get?sessionId=${actualSessionId}`);
-            if (sessionResponse.ok) {
-              const currentSession = await sessionResponse.json();
-              if (currentSession && currentSession.header && currentSession.header !== '新会话') {
-                return;
+            setLoading(false);
+            
+            setMessages(prev => {
+              const updated = [...prev];
+              if (updated[botMessageIndex]) {
+                updated[botMessageIndex] = {
+                  ...updated[botMessageIndex],
+                  streaming: false,
+                };
               }
-            }
+              return updated;
+            });
             
-            const response = await fetch(`http://10.98.64.22:8080/message/list-by-session?sessionId=${actualSessionId}`);
-            const messagesList = await response.json();
+            // 保存完整 Bot 消息
+            const completeBotMessage = {
+              content: normalizeLithoMessageContent(accumulatedContent),
+              messageId: maxMessageId + 2,
+              modelId: 2,
+              sessionId: actualSessionId,
+              timestamp: new Date().toISOString(),
+              userId: userId,
+              userType: MESSAGE_TYPE.BOT,
+            };
             
-            const firstUserMessage = messagesList.find(m => m.userType === MESSAGE_TYPE.USER);
-            const firstBotMessage = messagesList.find(m => m.userType === MESSAGE_TYPE.BOT);
-            
-            if (firstUserMessage) {
-              let generatedTitle = '';
+            await fetch(`${apiBaseUrl}/message/add`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(completeBotMessage),
+            });
+
+            // 生成并更新会话标题
+            try {
+              const sessionResponse = await fetch(`${apiBaseUrl}/session/get?sessionId=${actualSessionId}`);
+              if (sessionResponse.ok) {
+                const currentSession = await sessionResponse.json();
+                if (currentSession && currentSession.header && currentSession.header !== '新会话') {
+                  return;
+                }
+              }
               
-              try {
-                if (firstBotMessage && accumulatedContent) {
-                  const titleResponse = await fetch(`http://10.98.64.22:5007/generate_session_title`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      user_message: firstUserMessage.content,
-                      bot_response: accumulatedContent,
-                      message_type: 'lithography'
-                    })
-                  });
-                  
-                  if (titleResponse.ok) {
-                    const titleData = await titleResponse.json();
-                    if (titleData.title) {
-                      generatedTitle = titleData.title;
+              const response = await fetch(`${apiBaseUrl}/message/list-by-session?sessionId=${actualSessionId}`);
+              const messagesList = await response.json();
+              
+              const firstUserMessage = messagesList.find(m => m.userType === MESSAGE_TYPE.USER);
+              const firstBotMessage = messagesList.find(m => m.userType === MESSAGE_TYPE.BOT);
+              
+              if (firstUserMessage) {
+                let generatedTitle = '';
+                
+                try {
+                  if (firstBotMessage && accumulatedContent) {
+                    const titleResponse = await fetch(`${titleBaseUrl}/generate_session_title`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        user_message: firstUserMessage.content,
+                        bot_response: accumulatedContent,
+                        message_type: 'lithography'
+                      })
+                    });
+                    
+                    if (titleResponse.ok) {
+                      const titleData = await titleResponse.json();
+                      if (titleData.title) {
+                        generatedTitle = titleData.title;
+                      }
                     }
                   }
+                } catch (titleError) {}
+                
+                if (!generatedTitle) {
+                  const userContent = firstUserMessage.content || '';
+                  if (userContent.includes('<img') || userContent.includes('src=') || userContent.includes('文件上传')) {
+                    generatedTitle = '图片分析';
+                  } else {
+                    const cleanContent = userContent.replace(/<[^>]*>/g, '');
+                    generatedTitle = cleanContent.slice(0, 8) || '新会话';
+                  }
                 }
-              } catch (titleError) {}
-              
-              if (!generatedTitle) {
-                const userContent = firstUserMessage.content || '';
-                if (userContent.includes('<img') || userContent.includes('src=') || userContent.includes('文件上传')) {
-                  generatedTitle = '图片分析';
-                } else {
-                  const cleanContent = userContent.replace(/<[^>]*>/g, '');
-                  generatedTitle = cleanContent.slice(0, 8) || '新会话';
-                }
-              }
-              
-              const headerUpdate = {
-                createTime: new Date().toISOString(),
-                header: generatedTitle || '新会话',
-                lastActive: new Date().toISOString(),
-                modelId: 2,
-                sessionId: actualSessionId,
-                status: 1,
-                userId: userId,
-              };
-        
-              await fetch("http://10.98.64.22:8080/session/update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(headerUpdate),
-              });
-            }
-          } catch (error) {
-            console.error("更新会话错误:", error);
-          }
+                
+                const headerUpdate = {
+                  createTime: new Date().toISOString(),
+                  header: generatedTitle || '新会话',
+                  lastActive: new Date().toISOString(),
+                  modelId: 2,
+                  sessionId: actualSessionId,
+                  status: 1,
+                  userId: userId,
+                };
           
-          streamingBotMsgRef.current = null;
-          setStreamConnection(null);
+                await fetch(`${apiBaseUrl}/session/update`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(headerUpdate),
+                });
+              }
+            } catch (error) {
+              console.error("更新会话错误:", error);
+            }
+          } finally {
+            streamingBotMsgRef.current = null;
+            setStreamConnection(null);
+          }
         },
         // 错误回调
         (error) => {
@@ -302,7 +338,8 @@ const Chatbot = ({ port }) => {
     const initMessages = localStorage.getItem('guangkeBot');
     if (!!initMessages) {
       try {
-        setMessages(JSON.parse(initMessages));
+        const parsedMessages = JSON.parse(initMessages);
+        setMessages(Array.isArray(parsedMessages) ? parsedMessages.map(normalizeLithoMessage) : []);
       } catch (e) {}
     }
   }, []);
@@ -347,7 +384,7 @@ const Chatbot = ({ port }) => {
         formData.append('file', file);
         formData.append('type', file.type);
 
-        const messageListResponse = await fetch("http://10.98.64.22:8080/message/list-all");
+        const messageListResponse = await fetch(`${apiBaseUrl}/message/list-all`);
         const allMessages = await messageListResponse.json();
         const maxMessageId = allMessages.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
 
@@ -361,17 +398,17 @@ const Chatbot = ({ port }) => {
           userType: MESSAGE_TYPE.USER,
         };
 
-        await fetch("http://10.98.64.22:8080/message/add", {
+        await fetch(`${apiBaseUrl}/message/add`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newMessage),
         });
 
-        uploadFile(formData, {
+        uploadLithoFile(formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-        }, port)
+        })
           .then((response) => {
             if (response?.status === 200) {
               onSuccess(response);
@@ -396,7 +433,7 @@ const Chatbot = ({ port }) => {
                 userType: MESSAGE_TYPE.BOT,
               };
         
-              fetch("http://10.98.64.22:8080/message/add", {
+              fetch(`${apiBaseUrl}/message/add`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newMessage),
@@ -421,7 +458,7 @@ const Chatbot = ({ port }) => {
                 userType: MESSAGE_TYPE.BOT,
               };
         
-              fetch("http://10.98.64.22:8080/message/add", {
+              fetch(`${apiBaseUrl}/message/add`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newMessage),

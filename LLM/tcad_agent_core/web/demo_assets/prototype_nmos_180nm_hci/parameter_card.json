@@ -1,0 +1,17 @@
+{
+  "case_id": "compact_model_task",
+  "source_case": "NMOS_180nm_HCI",
+  "description": "基于 NMOS_180nm_HCI 中参考 Id-Vg / Id-Vd 曲线整理的 compact-model 参数卡。",
+  "model_form": "iv_curve_behavioral_overlay",
+  "VTH0": 0.4578,
+  "KP": 0.0003532,
+  "NFACTOR": 1.3,
+  "LAMBDA": 0.03,
+  "RS": 2.0,
+  "RD": 2.0,
+  "ION": 0.000556098351386425,
+  "IOFF": 1.64169336206645e-19,
+  "GM_MAX": 0.00041036431893961786,
+  "SS_MV_DEC": 192.52,
+  "IDSAT": 0.000482939979117848
+}

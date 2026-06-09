@@ -1,130 +1,48 @@
 import request from '../utils/request';
 import { fetchType } from './constant';
+import { CIRCUIT_BASE_URL } from '../config/endpoints';
+import { createStreamRequest } from '../utils/apiUtils';
 
-// Circuit负载均衡器URL
-const CIRCUIT_LOAD_BALANCER_URL = 'http://10.98.64.22:5103';
+// Circuit服务直连URL（以当前circuit.py为准）
+const CIRCUIT_API_BASE_URL = CIRCUIT_BASE_URL;
 
 /**
- * Circuit Analysis API - 负载均衡版本
+ * Circuit Analysis API - 直连版本
  * 支持电路图像分析和网表生成
  */
 
-// Circuit流式聊天API - 负载均衡版本
+// Circuit流式聊天API - 直连版本
 export const fetchCircuitStreaming = async (data, onChunkReceived, onComplete, onError) => {
-  try {
-    
-    const url = `${CIRCUIT_LOAD_BALANCER_URL}/stream_generate`;
-    
-    // 创建中止控制器
-    const controller = new AbortController();
-    const { signal } = controller;
-    
-    // 存储请求ID,用于中止特定流
-    let requestId = null;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-      signal
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    const processStream = async () => {
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          
-          if (done) {
-            if (onComplete) onComplete();
-            break;
-          }
-
-          const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
-
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.trim() === '') continue;
-            
-            if (line.startsWith('data: ')) {
-              try {
-                const jsonStr = line.slice(6).trim();
-                if (jsonStr === '[DONE]') {
-                  if (onComplete) onComplete();
-                  return;
-                }
-                
-                const parsedData = JSON.parse(jsonStr);
-                
-                // 存储请求ID用于可能的中止操作
-                if (parsedData.request_id && !requestId) {
-                  requestId = parsedData.request_id;
-                }
-                
-                if (parsedData.chunk && onChunkReceived) {
-                  onChunkReceived(parsedData.chunk, parsedData);
-                }
-                
-                if (parsedData.is_complete) {
-                  if (onComplete) onComplete();
-                  return;
-                }
-                
-                if (parsedData.error) {
-                  if (onError) onError(parsedData.error);
-                  return;
-                }
-              } catch (parseError) {
-                // JSON解析错误，跳过此行
-              }
-            }
-          }
-        }
-      } catch (streamError) {
-        if (onError) onError(streamError.message);
+  const streamRequest = createStreamRequest({
+    baseUrl: CIRCUIT_API_BASE_URL,
+    data,
+    onChunk: (parsedData) => {
+      if (parsedData.chunk && onChunkReceived) {
+        onChunkReceived(parsedData.chunk, parsedData);
       }
-    };
+      if (parsedData.error && onError) {
+        onError(parsedData.error);
+      }
+    },
+    onComplete,
+    onError: (error) => {
+      onError && onError(error.message || 'Circuit流式请求失败');
+    }
+  });
 
-    processStream();
-    
-    // 返回中止函数
-    return {
-      abort: () => {
-        controller.abort();
-        
-        // 如果有请求ID，通知负载均衡器中止
-        if (requestId) {
-          fetch(`${CIRCUIT_LOAD_BALANCER_URL}/abort_stream`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ request_id: requestId }),
-          }).catch(err => {});
-        }
-      },
-      requestId
-    };
-    
-  } catch (error) {
-    if (onError) onError(error.message || 'Circuit流式请求失败');
-    return null;
-  }
+  return {
+    abort: async () => {
+      await streamRequest.cancel();
+    },
+    cancel: async () => {
+      await streamRequest.cancel();
+    },
+    requestId: streamRequest.getRequestId(),
+    getRequestId: () => streamRequest.getRequestId()
+  };
 };
 
-// Circuit图像上传API - 负载均衡版本  
+// Circuit图像上传API - 直连版本  
 export const uploadCircuitImage = async (file, conversation_id, user_id) => {
   try {
     
@@ -134,7 +52,7 @@ export const uploadCircuitImage = async (file, conversation_id, user_id) => {
     formData.append('user_id', user_id || 'anonymous');
     
     const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
+      baseUrl: CIRCUIT_API_BASE_URL,
       url: '/uploadFile',
       data: formData,
       type: 'file',
@@ -151,33 +69,22 @@ export const uploadCircuitImage = async (file, conversation_id, user_id) => {
   }
 };
 
-// Circuit生成请求API - 负载均衡版本
+// Circuit生成请求API（兼容占位）
+// 当前后端(circuit.py)无 /generate 路由，请使用 fetchCircuitStreaming(/stream_generate)。
 export const fetchCircuitGenerate = async (data) => {
-  try {
-    
-    const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
-      url: '/generate',
-      data: data,
-      method: fetchType.post
-    });
-    
-    return response;
-    
-  } catch (error) {
-    return {
-      error: true,
-      message: error.message || 'Circuit生成请求失败'
-    };
-  }
+  return {
+    error: true,
+    message: '当前后端不支持 /generate，请使用 fetchCircuitStreaming(/stream_generate)',
+    data
+  };
 };
 
-// Circuit添加消息API - 负载均衡版本
+// Circuit添加消息API - 直连版本
 export const addCircuitMessage = async (messageData) => {
   try {
     
     const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
+      baseUrl: CIRCUIT_API_BASE_URL,
       url: '/add_message',
       data: messageData,
       method: fetchType.post
@@ -193,12 +100,12 @@ export const addCircuitMessage = async (messageData) => {
   }
 };
 
-// Circuit更新会话API - 负载均衡版本
+// Circuit更新会话API - 直连版本
 export const updateCircuitSession = async (sessionData) => {
   try {
     
     const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
+      baseUrl: CIRCUIT_API_BASE_URL,
       url: '/update_session',
       data: sessionData,
       method: fetchType.post
@@ -220,7 +127,7 @@ export const switchCircuitMode = async (mode) => {
   try {
     
     const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
+      baseUrl: CIRCUIT_API_BASE_URL,
       url: '/switch_mode',
       data: { mode },
       method: fetchType.post
@@ -240,7 +147,7 @@ export const switchCircuitMode = async (mode) => {
 export const getCurrentCircuitMode = async () => {
   try {
     const response = await request({
-      baseUrl: CIRCUIT_LOAD_BALANCER_URL,
+      baseUrl: CIRCUIT_API_BASE_URL,
       url: '/current_mode',
       method: fetchType.get
     });

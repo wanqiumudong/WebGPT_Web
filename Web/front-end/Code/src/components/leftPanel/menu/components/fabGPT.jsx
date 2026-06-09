@@ -13,17 +13,17 @@ const FabGPT = (props) => {
       <g
         id='页面-1'
         stroke='none'
-        stroke-width='1'
+        strokeWidth='1'
         fill='none'
-        fill-rule='evenodd'
+        fillRule='evenodd'
       >
         <g
           id='首页'
           transform='translate(-44.000000, -387.000000)'
           fill={isSelected ? '#1888FF' : '#333333'}
-          fill-rule='nonzero'
+          fillRule='nonzero'
           stroke={isSelected ? '#1888FF' : '#333333'}
-          stroke-width='0.2'
+          strokeWidth='0.2'
         >
           <g id='编组-4' transform='translate(26.000000, 212.000000)'>
             <g id='gpt-(1)' transform='translate(18.000000, 175.000000)'>

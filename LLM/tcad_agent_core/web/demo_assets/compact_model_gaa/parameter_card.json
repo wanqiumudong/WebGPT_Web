@@ -1,0 +1,27 @@
+{
+  "case_id": "gaa_compact_model",
+  "source_case": "mw92_f01_01",
+  "description": "基于三维 stacked nanosheet GAA 的参考 Id-Vg / Id-Vd 曲线整理的 behavioral compact-model 参数卡。",
+  "model_form": "curve_matched_behavioral_overlay",
+  "VTH0": 0.188,
+  "KP": 0.0014758,
+  "NFACTOR": 1.6,
+  "LAMBDA": 0.1088,
+  "RS": 2.0,
+  "RD": 2.0,
+  "curve_metrics": {
+    "ION": 0.000268701103806106,
+    "IOFF": 2.81984823232152e-09,
+    "GM_MAX": 0.000622127631194584,
+    "SS_MV_DEC": 103.78,
+    "IDSAT": 0.000306438751718277
+  },
+  "provenance": {
+    "VTH0": "由 transfer curve 的 constant-current 门限近似得到。",
+    "KP": "由 output curve 饱和电流反推并做稳定化处理。",
+    "NFACTOR": "由亚阈值区趋势估算。",
+    "LAMBDA": "由高 Vd 区域斜率估算。",
+    "RS": "接口预留参数，便于连接后续电路级验证。",
+    "RD": "接口预留参数，便于连接后续电路级验证。"
+  }
+}

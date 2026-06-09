@@ -1,21 +1,10 @@
 import request from '../utils/request';
 import { fetchType } from './constant';
 import axios from "axios";
+import { TCAD_BASE_URL } from '../config/endpoints';
+import { createStreamRequest } from '../utils/apiUtils';
 
-const TCAD_LOAD_BALANCER_URL = 'http://10.98.64.22:5102';
-
-const parseSSEData = (line, serviceName) => {
-  if (!line.startsWith('data: ')) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(line.substring(6));
-  } catch (e) {
-    console.warn(`${serviceName} SSE数据解析失败:`, e);
-    return null;
-  }
-};
+const TCAD_LOAD_BALANCER_URL = TCAD_BASE_URL;
 
 export const fetchTCAD = async (data) => {
   try {
@@ -33,112 +22,38 @@ export const fetchTCAD = async (data) => {
 };
 
 export const fetchTCADStreaming = (data, onChunkReceived, onComplete, onError) => {
-  const url = `${TCAD_LOAD_BALANCER_URL}/stream_generate`;
-  const controller = new AbortController();
-  const { signal } = controller;
-  let requestId = null;
-
-  const fetchStream = async () => {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      const processStream = async ({ done, value }) => {
-        if (done) {
-          onComplete && onComplete();
-          return;
-        }
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n\n');
-
-        for (const line of lines) {
-          const streamData = parseSSEData(line, 'TCAD');
-          if (!streamData) {
-            continue;
-          }
-
-          if (streamData.start_streaming && streamData.request_id) {
-            requestId = streamData.request_id;
-          }
-
-          onChunkReceived && onChunkReceived(streamData);
-
-          if (streamData.is_complete || streamData.aborted) {
-            onComplete && onComplete();
-            return;
-          }
-        }
-
-        try {
-          const result = await reader.read();
-          return processStream(result);
-        } catch (e) {
-          if (e.name !== 'AbortError') {
-            throw e;
-          }
-        }
-      };
-
-      reader.read().then(processStream);
-    } catch (e) {
-      if (e.name !== 'AbortError') {
-        console.error('TCAD流式API请求出错:', e);
-        onError && onError(e);
-      }
+  const streamRequest = createStreamRequest({
+    baseUrl: TCAD_LOAD_BALANCER_URL,
+    data,
+    onChunk: (streamData) => {
+      onChunkReceived && onChunkReceived(streamData);
+    },
+    onComplete,
+    onError: (error) => {
+      console.error('TCAD流式API请求出错:', error);
+      onError && onError(error);
     }
-  };
-
-  fetchStream();
+  });
 
   return {
     cancel: async () => {
       try {
-        if (requestId) {
-          try {
-            await fetch(`${TCAD_LOAD_BALANCER_URL}/abort_stream`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ request_id: requestId })
-            });
-          } catch (e) {
-            console.error('发送中止请求到TCAD负载均衡器时出错:', e);
-          }
-        }
-
         if (onChunkReceived) {
           onChunkReceived({
             aborted: true,
             chunk: "",
-            is_complete: true
+            is_complete: false
           });
         }
 
-        controller.abort();
-        onComplete && onComplete();
+        await streamRequest.cancel();
         return true;
       } catch (e) {
         console.error('取消TCAD流式请求时出错:', e);
-        onComplete && onComplete();
         throw e;
       }
     },
-    getRequestId: () => requestId
+    getRequestId: () => streamRequest.getRequestId()
   };
 };
 
@@ -163,3 +78,57 @@ export const deleteTCADUploadedFile = (data) => {
       return e;
     });
 };
+
+const fetchTCADJson = async (path, params = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && `${value}`.trim() !== '') {
+      query.set(key, value);
+    }
+  });
+  const queryText = query.toString();
+  const url = `${TCAD_LOAD_BALANCER_URL}${path}${queryText ? `?${queryText}` : ''}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+  return response.json();
+};
+
+export const buildTCADSessionExportUrl = ({ user_id, conversation_id, format = 'markdown' }) => {
+  const query = new URLSearchParams();
+  if (user_id) {
+    query.set('user_id', user_id);
+  }
+  if (conversation_id) {
+    query.set('conversation_id', conversation_id);
+  }
+  if (format) {
+    query.set('format', format);
+  }
+  const queryText = query.toString();
+  return `${TCAD_LOAD_BALANCER_URL}/session_export${queryText ? `?${queryText}` : ''}`;
+};
+
+export const fetchTCADDemoCases = async (limit = 8) => fetchTCADJson('/demo_cases', { limit });
+
+export const fetchTCADSessionSummary = async ({ user_id, conversation_id }) =>
+  fetchTCADJson('/session_summary', { user_id, conversation_id });
+
+export const fetchTCADReferencePreview = async ({ user_id, conversation_id, ref_id }) =>
+  fetchTCADJson('/reference_preview', { user_id, conversation_id, ref_id });
+
+export const fetchTCADArtifactPreview = async ({ user_id, conversation_id, artifact_key, max_lines = 80 }) =>
+  fetchTCADJson('/artifact_preview', { user_id, conversation_id, artifact_key, max_lines });
+
+export const fetchTCADBriefSummary = async ({ user_id, conversation_id }) =>
+  fetchTCADJson('/brief_summary', { user_id, conversation_id });
+
+export const fetchTCADValidationSummary = async ({ user_id, conversation_id }) =>
+  fetchTCADJson('/validation_summary', { user_id, conversation_id });
+
+export const fetchTCADWorkspaceManifest = async ({ user_id, conversation_id }) =>
+  fetchTCADJson('/workspace_manifest', { user_id, conversation_id });
+
+export const fetchTCADWorkspacePreview = async ({ user_id, conversation_id, path, max_lines = 80 }) =>
+  fetchTCADJson('/workspace_preview', { user_id, conversation_id, path, max_lines });

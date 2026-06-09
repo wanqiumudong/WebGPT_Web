@@ -1,0 +1,510 @@
+.tcad-workbench {
+  width: 100%;
+  max-width: 392px;
+  min-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tcad-workbench-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tcad-workbench-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #18314d;
+}
+
+.tcad-workbench-subtitle {
+  margin-top: 4px;
+  color: #6a7d95;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tcad-workbench-card {
+  border: 1px solid #e4edf7;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(83, 160, 255, 0.08), transparent 34%),
+    #fff;
+  box-shadow: 0 22px 42px rgba(13, 61, 117, 0.06);
+  padding: 16px;
+}
+
+.tcad-workbench-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #16324f;
+  margin-bottom: 12px;
+}
+
+.tcad-workbench-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tcad-workbench-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tcad-workbench-stat-card {
+  border-radius: 14px;
+  background: #f7fbff;
+  border: 1px solid #e5eef8;
+  padding: 10px 12px;
+}
+
+.tcad-workbench-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6a7d95;
+}
+
+.tcad-workbench-stat-value {
+  margin-top: 6px;
+  color: #18314d;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tcad-workbench-stage-text,
+.tcad-workbench-note,
+.tcad-workbench-empty-text {
+  color: #5f748d;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tcad-workbench-requirement {
+  color: #243f5b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.tcad-workbench-demo-summary {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #dce9f8;
+  background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+}
+
+.tcad-workbench-demo-title {
+  color: #18314d;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.tcad-workbench-demo-copy {
+  margin-top: 6px;
+  color: #56708b;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.tcad-workbench-demo-capabilities {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tcad-workbench-demo-chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eaf3ff;
+  color: #24527d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tcad-workbench-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tcad-workbench-panel-card {
+  border-radius: 16px;
+  border: 1px solid #e4edf7;
+  background: #f8fbff;
+  padding: 12px 14px;
+}
+
+.tcad-workbench-panel-title {
+  color: #18314d;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.tcad-workbench-panel-item {
+  position: relative;
+  padding-left: 14px;
+  color: #526980;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.tcad-workbench-panel-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2d78cf;
+}
+
+.tcad-workbench-upload-list,
+.tcad-workbench-highlight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tcad-workbench-note-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tcad-workbench-note-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tcad-workbench-note-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 999px;
+  background: #1f7aff;
+  margin-top: 5px;
+  box-shadow: 0 0 0 4px rgba(31, 122, 255, 0.12);
+}
+
+.tcad-workbench-note-line {
+  color: #314b66;
+  font-size: 13px;
+  line-height: 1.75;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #dce6f1;
+  width: 100%;
+}
+
+.tcad-workbench-note-step:last-child .tcad-workbench-note-line {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tcad-workbench-upload-chip,
+.tcad-workbench-highlight-item {
+  border-radius: 12px;
+  background: #f5f8fd;
+  color: #334e68;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 10px;
+}
+
+.tcad-workbench-reference-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tcad-workbench-reference-card {
+  border-radius: 14px;
+  background: #f8fbff;
+  border: 1px solid #e7eff8;
+  padding: 12px;
+}
+
+.tcad-workbench-reference-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tcad-workbench-reference-why {
+  margin-top: 10px;
+  color: #49627c;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f3f8ff;
+  border: 1px dashed #d9e7f6;
+}
+
+.tcad-workbench-reference-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tcad-workbench-briefs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tcad-workbench-reference-note {
+  color: #48607b;
+  font-size: 13px;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+
+.tcad-workbench-reference-groups { display: flex; flex-direction: column; gap: 14px; }
+
+.tcad-workbench-reference-group-title, .tcad-workbench-reference-preview-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #53708d;
+}
+
+.tcad-workbench-reference-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.tcad-workbench-reference-card, .tcad-workbench-reference-preview {
+  border-radius: 14px;
+  background: #f8fbff;
+  border: 1px solid #e7eff8;
+}
+
+.tcad-workbench-reference-card {
+  padding: 12px;
+}
+
+.tcad-workbench-reference-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tcad-workbench-reference-title {
+  color: #18314d;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.tcad-workbench-reference-summary, .tcad-workbench-reference-why, .tcad-workbench-reference-preview-text {
+  color: #546b83;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.tcad-workbench-reference-why {
+  margin-top: 8px;
+}
+
+.tcad-workbench-reference-preview {
+  margin-top: 6px;
+  padding: 12px;
+}
+
+.tcad-workbench-reference-preview-block + .tcad-workbench-reference-preview-block { margin-top: 10px; }
+
+.tcad-workbench-reference-preview-code {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eff5fc;
+  color: #18314d;
+  font-size: 12px;
+  line-height: 1.7;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tcad-workbench-brief-card {
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 12px;
+  border: 1px solid #e7eff8;
+}
+
+.tcad-workbench-brief-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18314d;
+  margin-bottom: 6px;
+}
+
+.tcad-workbench-brief-summary {
+  color: #4d6379;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tcad-workbench-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.tcad-workbench-metric-item {
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #e7eff8;
+  padding: 10px;
+}
+
+.tcad-workbench-metric-key {
+  display: block;
+  color: #6a7d95;
+  font-size: 12px;
+}
+
+.tcad-workbench-metric-value {
+  display: block;
+  margin-top: 4px;
+  color: #17304c;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tcad-workbench-artifacts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tcad-workbench-gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.tcad-workbench-gallery-card {
+  display: block;
+  text-decoration: none;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e4edf7;
+  background: #f9fbfe;
+}
+
+.tcad-workbench-gallery-caption {
+  padding: 12px;
+}
+
+.tcad-workbench-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tcad-workbench-artifact-card {
+  border-radius: 14px;
+  background: #f8fbff;
+  border: 1px solid #e7eff8;
+  padding: 12px;
+}
+
+.tcad-workbench-artifact-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tcad-workbench-artifact-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18314d;
+}
+
+.tcad-workbench-artifact-name {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6a7d95;
+  word-break: break-all;
+}
+
+.tcad-workbench-artifact-link {
+  white-space: nowrap;
+  color: #1677ff;
+  font-size: 12px;
+}
+
+.tcad-workbench-image-link {
+  display: block;
+}
+
+.tcad-workbench-artifact-image {
+  width: 100%;
+  display: block;
+  border-bottom: 1px solid #dde8f3;
+  background: #fff;
+}
+
+.tcad-workbench-preview-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5f748d;
+}
+
+.tcad-workbench-preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #17304c;
+  margin-bottom: 8px;
+}
+
+.tcad-workbench-preview-content {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #e8edf3;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow: auto;
+  max-height: 260px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 1280px) {
+  .tcad-workbench {
+    max-width: none;
+    min-width: 0;
+  }
+}

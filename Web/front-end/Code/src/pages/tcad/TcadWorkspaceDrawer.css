@@ -1,0 +1,315 @@
+.tcad-workspace-drawer {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  z-index: 4;
+  max-height: calc(100vh - 140px);
+  border: 1px solid rgba(23, 58, 99, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 251, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(14, 42, 74, 0.08);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+
+.tcad-workspace-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+}
+
+.tcad-workspace-handle-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #173a63;
+}
+
+.tcad-workspace-handle-subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #7d90a7;
+}
+
+.tcad-workspace-handle-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tcad-workspace-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 0;
+  flex: 1;
+  height: min(420px, calc(100vh - 240px));
+  max-height: min(420px, calc(100vh - 240px));
+  border-top: 1px solid rgba(23, 58, 99, 0.08);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tcad-workspace-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  padding: 14px;
+  padding-bottom: 28px;
+  border-right: 1px solid rgba(23, 58, 99, 0.08);
+  background: rgba(255, 255, 255, 0.56);
+  overflow: hidden;
+}
+
+.tcad-workspace-summary {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(23, 58, 99, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.tcad-workspace-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tcad-workspace-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tcad-workspace-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6f839b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tcad-workspace-summary-item strong {
+  font-size: 13px;
+  color: #173a63;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.tcad-workspace-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
+
+.tcad-workspace-group + .tcad-workspace-group {
+  margin-top: 14px;
+}
+
+.tcad-workspace-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f748d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tcad-workspace-group-header-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tcad-workspace-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tcad-workspace-file {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 58, 99, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tcad-workspace-file:hover,
+.tcad-workspace-file-active {
+  border-color: rgba(24, 136, 255, 0.35);
+  background: rgba(24, 136, 255, 0.08);
+}
+
+.tcad-workspace-file-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2d5f95;
+}
+
+.tcad-workspace-file-name {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #44586f;
+  word-break: break-all;
+}
+
+.tcad-workspace-preview {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tcad-workspace-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.tcad-workspace-preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #173a63;
+}
+
+.tcad-workspace-preview-name {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6f839b;
+  word-break: break-all;
+}
+
+.tcad-workspace-preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tcad-workspace-image-panel,
+.tcad-workspace-text-panel,
+.tcad-workspace-file-placeholder {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid rgba(23, 58, 99, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.tcad-workspace-image-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow: auto;
+}
+
+.tcad-workspace-image-download {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(14, 42, 74, 0.16);
+}
+
+.tcad-workspace-image {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(14, 42, 74, 0.12);
+}
+
+.tcad-workspace-text-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tcad-workspace-preview-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 0;
+  font-size: 12px;
+  color: #6c7f95;
+}
+
+.tcad-workspace-text {
+  flex: 1;
+  margin: 0;
+  padding: 12px 14px 16px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #20384f;
+  background: transparent;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tcad-workspace-file-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  font-size: 13px;
+  color: #6c7f95;
+  text-align: center;
+}
+
+.tcad-workspace-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
+@media (max-width: 900px) {
+  .tcad-workspace-drawer {
+    left: 16px;
+    right: 16px;
+  }
+
+  .tcad-workspace-body {
+    grid-template-columns: 1fr;
+    max-height: 520px;
+  }
+
+  .tcad-workspace-sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(23, 58, 99, 0.08);
+  }
+
+  .tcad-workspace-sidebar-scroll {
+    max-height: 200px;
+  }
+}

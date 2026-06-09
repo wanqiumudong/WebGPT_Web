@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Avatar, Spin, Button, Tooltip, Input } from 'antd';
+import { Avatar, Button, Tooltip } from 'antd';
 import { MESSAGE_AVATAR, MESSAGE_TYPE } from '../../constants';
 import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import './index.css';
@@ -112,7 +112,10 @@ const ChatMessage = (props) => {
     isDeleted = false,
     deleted = false,
     isLoading = false,
-    isSystemPrompt = false
+    traceEntries = [],
+    flowEntries = [],
+    agentStatus = '',
+    artifactLinks = []
   } = props;
   
   const avatarUrl = MESSAGE_AVATAR[sendType];
@@ -129,6 +132,11 @@ const ChatMessage = (props) => {
   
   // 流式消息支持
   const isStreaming = Boolean(streaming);
+  const hasTracePanel = sendType === MESSAGE_TYPE.BOT && traceEntries.length > 0;
+  const hasFlowPanel = sendType === MESSAGE_TYPE.BOT && flowEntries.length > 0;
+  const hasAssistantTimeline = sendType === MESSAGE_TYPE.BOT && flowEntries.some(
+    (entry) => entry.kind === 'assistant_text' || entry.kind === 'assistant'
+  );
   
   // === 直接处理不同类型的内容 ===
   const contentParts = useMemo(() => {
@@ -201,6 +209,160 @@ const ChatMessage = (props) => {
         }
     }
   };
+
+  const renderTracePanel = () => {
+    if (!hasTracePanel) {
+      return null;
+    }
+
+    return (
+      <div className="message-trace-panel">
+        <div className="message-trace-body">
+          {traceEntries.map((entry) => (
+            <div key={entry.id} className={`message-trace-item message-trace-${entry.kind || 'status'}`}>
+              <div className="message-trace-item-label">{entry.label}</div>
+              {entry.path ? <div className="message-trace-item-meta">{entry.path}</div> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderArtifactPanel = () => {
+    if (!artifactLinks || artifactLinks.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="message-artifact-panel">
+        <div className="message-artifact-title">结果文件</div>
+        <div className="message-artifact-list">
+          {artifactLinks.map((item) => (
+            <a
+              key={item.key || item.url || item.file_name}
+              className="message-artifact-card"
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div className="message-artifact-label">{item.label || item.file_name || item.key}</div>
+              <div className="message-artifact-name">{item.file_name || item.key}</div>
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPlanEntry = (entry) => {
+    if (entry.kind === 'plan_step') {
+      const status = String(entry.status || '').trim() || 'pending';
+      const statusMap = {
+        pending: '待执行',
+        in_progress: '执行中',
+        completed: '已完成',
+        failed: '失败',
+        skipped: '已跳过',
+        blocked: '阻塞',
+      };
+      return (
+        <div
+          key={entry.id}
+          className={classNames(
+            'message-plan-step',
+            `message-plan-step-${status}`
+          )}
+        >
+          <span className="message-plan-step-state">{statusMap[status] || status}</span>
+          <span className="message-plan-step-title">{entry.title || entry.text || '未命名步骤'}</span>
+        </div>
+      );
+    }
+
+    if (entry.kind === 'tool_status') {
+      const status = String(entry.status || 'running').trim() || 'running';
+      const statusMap = {
+        running: '调用中',
+        success: '调用成功',
+        error: '调用失败',
+      };
+      return (
+        <div
+          key={entry.id}
+          className={classNames(
+            'message-tool-status',
+            `message-tool-status-${status}`
+          )}
+        >
+          <span className="message-tool-status-badge">{statusMap[status] || status}</span>
+          <span className="message-tool-status-title">{entry.toolName || entry.label || '工具调用'}</span>
+        </div>
+      );
+    }
+
+    if (entry.kind === 'assistant_text' || entry.kind === 'assistant') {
+      let htmlContent = '';
+      try {
+        htmlContent = md.render(entry.text || entry.label || '');
+      } catch (error) {
+        htmlContent = md.renderInline(entry.text || entry.label || '');
+      }
+
+      return (
+        <div key={entry.id} className="message-flow-assistant-text">
+          <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={entry.id}
+        className={`message-flow-item message-flow-${entry.kind || 'note'}`}
+      >
+        {entry.text || entry.label}
+      </div>
+    );
+  };
+
+  const renderFlowPanel = () => {
+    const visibleFlowEntries = flowEntries;
+    const planEntries = visibleFlowEntries.filter(
+      (entry) => entry.kind === 'plan_created' || entry.kind === 'plan_step'
+    );
+    const otherEntries = visibleFlowEntries.filter(
+      (entry) => entry.kind !== 'plan_created' && entry.kind !== 'plan_step'
+    );
+    const planSummaryEntry = planEntries.find((entry) => entry.kind === 'plan_created');
+    const planSteps = planEntries.filter((entry) => entry.kind === 'plan_step');
+    const completedSteps = planSteps.filter((entry) => entry.status === 'completed').length;
+
+    if (!visibleFlowEntries.length) {
+      return null;
+    }
+
+    return (
+      <div className="message-flow-panel">
+        {planEntries.length > 0 ? (
+          <details className="message-plan-details">
+            <summary className="message-plan-summary">
+              <span className="message-plan-summary-title">
+                {planSummaryEntry?.label || '执行计划'}
+              </span>
+              <span className="message-plan-summary-meta">
+                {completedSteps}/{planSteps.length || 0}
+              </span>
+            </summary>
+            <div className="message-plan-list">
+              {planSteps.map((entry) => renderPlanEntry(entry))}
+            </div>
+          </details>
+        ) : null}
+        {otherEntries.map((entry) => renderPlanEntry(entry))}
+      </div>
+    );
+  };
   
   // 渲染部分
   return (
@@ -215,13 +377,21 @@ const ChatMessage = (props) => {
         'message-content',
         isImgUrl && 'message-img-content',
         isFileMessage && 'message-file-content',
-        (loading || isStreaming) && 'message-loading'
+        (loading || isStreaming) && 'message-loading',
+        (loading || isStreaming) && hasFlowPanel && 'message-loading-with-flow'
       )}>
         {/* 消息内容渲染 */}
         {isLoading ? (
-          <div className="loading-message">
-            <span>{message}</span>
-          </div>
+          <React.Fragment>
+            {!hasTracePanel && !hasFlowPanel && (agentStatus || message) ? (
+              <div className="loading-message">
+                <span>{agentStatus || message}</span>
+              </div>
+            ) : null}
+            {renderFlowPanel()}
+            {renderTracePanel()}
+            {renderArtifactPanel()}
+          </React.Fragment>
         ) : (
         isFileMessage ? (
           <div className="file-message-container">
@@ -272,10 +442,14 @@ const ChatMessage = (props) => {
         ) : (
           // === 普通消息渲染 ===
           <React.Fragment>
-            <div className="message-content-wrapper">
-              {/* 消息内容 */}
-              {contentParts.map((part, index) => renderContentPart(part, index))}
-            </div>
+            {!hasAssistantTimeline ? (
+              <div className="message-content-wrapper">
+                {contentParts.map((part, index) => renderContentPart(part, index))}
+              </div>
+            ) : null}
+            {renderFlowPanel()}
+            {renderTracePanel()}
+            {renderArtifactPanel()}
           </React.Fragment>
         ))}
       </div>

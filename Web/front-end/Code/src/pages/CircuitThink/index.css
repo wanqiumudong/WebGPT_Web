@@ -1,4 +1,4 @@
-.tcad {
+.circuit-page {
   width          : 100%;
   height         : 100%;
   overflow       : hidden;
@@ -7,48 +7,57 @@
   justify-content: flex-start;
   align-items    : center;
   position       : relative;
+  box-sizing     : border-box;
+  padding-bottom : 8px;
 }
 
-.tcad-empty {
+.circuit-empty {
   width          : 100%;
   height         : 100%;
   display        : flex;
   flex-direction : column;
   justify-content: center;
   align-items    : center;
+  overflow-y     : auto;
+  padding        : 32px 24px 88px;
+  box-sizing     : border-box;
 }
 
-.tcad-title {
+.circuit-title {
+  min-height : 64px;
   font-size  : 48px;
   color      : #1888FF;
-  font-weight: 500;
+  font-weight: 700;
   text-align : center;
+  line-height: 64px;
   white-space: nowrap;
-  width      : 100%;
+  width      : min(860px, 100%);
   margin     : 0;
   padding    : 0;
 }
 
-.tcad-question {
-  font-size  : 48px;
-  color      : #999999;
+.circuit-question {
+  min-height : 48px;
+  font-size  : 36px;
+  color      : #7a8da4;
+  line-height: 58px;
   font-weight: 400;
-  margin-top : 20px;
+  margin-top : 8px;
   text-align : center;
-  white-space: nowrap;
-  width      : 100%;
+  white-space: normal;
+  width      : min(860px, 100%);
   margin-left: 0;
   margin-right: 0;
-  margin-top : 20px;
 }
 
-.tcad-intro {
+.circuit-intro {
   font-size   : 18px;
-  line-height : 42px;
-  color       : #999;
-  width       : 440px;
-  margin-left: 10px;
-  text-align: left;
+  line-height : 1.9;
+  color       : #8ea0b3;
+  width       : min(860px, 100%);
+  margin-left : 0;
+  margin-top  : 8px;
+  text-align  : center;
 }
 
 .tcad-info {
@@ -61,30 +70,31 @@
   white-space : nowrap;
 }
 
-.tcad-footer {
+.circuit-footer {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 8px;
+  left: 24px;
+  right: 24px;
   background: #fff;
-  border-radius: 12px 12px 0 0;
+  border-radius: 16px;
   padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 24px rgba(14, 42, 74, 0.08);
+  z-index: 5;
 }
 
 /* 确保所有按钮都有一致的高度 */
-.tcad-footer button,
-.tcad-footer .ant-btn {
+.circuit-footer button,
+.circuit-footer .ant-btn {
   height: 32px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
-.tcad-footer .ant-form {
+.circuit-footer .ant-form {
   display: flex;
   align-items: center;
 }
@@ -102,7 +112,7 @@
   cursor: pointer;
 }
 
-:global(.tcad-footer .ant-input) {
+:global(.circuit-footer .ant-input) {
   border: none !important;
 }
 
@@ -112,9 +122,12 @@
   flex-direction: column;
   width: 100%;
   gap: 16px;
+  height: 100%;
   overflow-y: auto;
-  padding-bottom: 70px;
+  padding: 16px 24px 88px;
   scroll-behavior: smooth;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 /* 自动滚动开关样式 */
@@ -164,9 +177,10 @@
 /* 添加外层容器 */
 .chat-message-container {
   width: 100%;
-  height: calc(100% - 64px);
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  min-height: 0;
 }

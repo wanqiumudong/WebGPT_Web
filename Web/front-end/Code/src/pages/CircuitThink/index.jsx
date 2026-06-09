@@ -2,20 +2,31 @@ import './index.css';
 import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { Button, Form, Input, message, Upload } from 'antd';
 import Cookies from 'js-cookie';
-import axios from 'axios';
 import { fetchCircuitStreaming, uploadCircuitImage } from '../../api/circuitApi';
 import { MESSAGE_TYPE, THINKING_TEXTS } from '../../constants';
 import ChatMessage from '../../components/chatMessage';
 import { LoadingOutlined, CloudUploadOutlined, StopOutlined } from '@ant-design/icons';
 // 导入默认会话相关函数
-import { DEFAULT_SESSION, createRealSessionAfterChat, isDefaultSession } from '../../components/history/history';
+import { DEFAULT_SESSION, createRealSessionAfterChat } from '../../components/history/history';
+import { BACKEND_BASE_URL, CIRCUIT_BASE_URL } from '../../config/endpoints';
 
 // =============== 常量配置 ===============
 const MODEL_ID = 5;
 const COOKIE_KEY = 'circuit_5';
-const BACKEND_API_BASE = "http://10.98.64.22:8080";
+const BACKEND_API_BASE = BACKEND_BASE_URL;
+const CIRCUIT_API_BASE = CIRCUIT_BASE_URL;
+const CIRCUIT_MESSAGE_CACHE_PREFIX = 'circuit_messages_';
 
 // =============== 工具函数 ===============
+const normalizeCircuitImageContent = (content) => {
+  if (!content || typeof content !== 'string') return content;
+
+  return content.replace(
+    /https?:\/\/[^"'\s>]+:(?:5005|5105)\/files\//g,
+    `${CIRCUIT_API_BASE}/files/`
+  );
+};
+
 const preprocessModelOutput = (content) => {
   if (!content) return content;
   
@@ -42,11 +53,52 @@ const processMessage = (msg) => {
   
   if (normalizedMsg.userType === MESSAGE_TYPE.BOT && normalizedMsg.content) {
     if (normalizedMsg.content.includes('<img')) {
-      return normalizedMsg;
+      return { ...normalizedMsg, content: normalizeCircuitImageContent(normalizedMsg.content) };
     }
     return { ...normalizedMsg, content: preprocessModelOutput(normalizedMsg.content) };
   }
+  if (normalizedMsg.userType === MESSAGE_TYPE.USER && normalizedMsg.content && normalizedMsg.content.includes('<img')) {
+    return { ...normalizedMsg, content: normalizeCircuitImageContent(normalizedMsg.content) };
+  }
   return normalizedMsg;
+};
+
+const getCircuitMessageCacheKey = (sessionId) => `${CIRCUIT_MESSAGE_CACHE_PREFIX}${sessionId}`;
+
+const readCachedMessages = (sessionId) => {
+  if (!sessionId || sessionId === DEFAULT_SESSION) return [];
+  try {
+    const raw = window.sessionStorage.getItem(getCircuitMessageCacheKey(sessionId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const writeCachedMessages = (sessionId, messages) => {
+  if (!sessionId || sessionId === DEFAULT_SESSION) return;
+  try {
+    const normalizedMessages = (Array.isArray(messages) ? messages : []).map((msg) => ({
+      ...msg,
+      streaming: false,
+      isLoading: false,
+    }));
+    window.sessionStorage.setItem(
+      getCircuitMessageCacheKey(sessionId),
+      JSON.stringify(normalizedMessages)
+    );
+  } catch (error) {
+  }
+};
+
+const clearCachedMessages = (sessionId) => {
+  if (!sessionId || sessionId === DEFAULT_SESSION) return;
+  try {
+    window.sessionStorage.removeItem(getCircuitMessageCacheKey(sessionId));
+  } catch (error) {
+  }
 };
 
 // =============== API函数 ===============
@@ -134,7 +186,6 @@ const addMessage = async (messageData) => {
     const completeMessage = {
       content: messageData.content || '',
       messageId: messageData.messageId,
-      modelId: MODEL_ID,
       sessionId: messageData.sessionId,
       timestamp: messageData.timestamp || new Date().toISOString(),
       userId: validUserId, // 确保始终是有效的数字
@@ -142,7 +193,7 @@ const addMessage = async (messageData) => {
     };
     
     
-    const response = await fetch(`${BACKEND_API_BASE}/message/add`, {
+    const response = await fetch(`${CIRCUIT_API_BASE}/add_message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(completeMessage),
@@ -181,7 +232,6 @@ const updateSessionHeader = async (sessionId, userId, userMessage = '', botMessa
     if (firstUserMessage) {
       // 使用传入的消息或从数据库获取的消息
       const userContent = userMessage || firstUserMessage.content;
-      const botContent = botMessage || (messagesList.find(m => m.userType === MESSAGE_TYPE.BOT)?.content || '');
       
       let generatedTitle = '';
       
@@ -204,14 +254,19 @@ const updateSessionHeader = async (sessionId, userId, userMessage = '', botMessa
         modelId: MODEL_ID,
         sessionId: sessionId,
         status: 1,
-        userId: parseInt(userId),
+        userId: !isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : 1,
       };
 
       
-      const result = await apiRequest("session/update", {
+      const updateResponse = await fetch(`${CIRCUIT_API_BASE}/update_session`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(headerUpdate)
       });
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        throw new Error(`HTTP error! status: ${updateResponse.status}, body: ${errorText}`);
+      }
       
       
       // 确保触发历史更新事件
@@ -329,6 +384,7 @@ const CircuitThink = ({ port }) => {
       const { deletedSessionId, modelId, shouldResetToDefault } = event.detail;
       
       if (modelId === MODEL_ID && shouldResetToDefault) {
+        clearCachedMessages(deletedSessionId);
         // 强制重置所有状态
         setMessages([]);
         setLoadingStates(false, false);
@@ -373,12 +429,14 @@ const CircuitThink = ({ port }) => {
         .then(data => {
           
           if (!Array.isArray(data)) {
-            setMessages([]);
+            const cachedMessages = readCachedMessages(sessionId);
+            setMessages(cachedMessages);
             return;
           }
           
           if (data.length === 0) {
-            setMessages([]);
+            const cachedMessages = readCachedMessages(sessionId);
+            setMessages(cachedMessages);
             return;
           }
           
@@ -403,7 +461,8 @@ const CircuitThink = ({ port }) => {
             setSessionId(DEFAULT_SESSION);
           }
           
-          setMessages([]);
+          const cachedMessages = readCachedMessages(sessionId);
+          setMessages(cachedMessages);
         });
     } else if (sessionId === DEFAULT_SESSION) {
       setMessages([]);
@@ -411,6 +470,13 @@ const CircuitThink = ({ port }) => {
       setMessages([]);
     }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId || sessionId === DEFAULT_SESSION) {
+      return;
+    }
+    writeCachedMessages(sessionId, messages);
+  }, [sessionId, messages]);
 
   // =============== 图片分析专用函数 ===============
   const startImageAnalysis = async (userMessageId = null) => {
@@ -501,7 +567,7 @@ const CircuitThink = ({ port }) => {
                       const isHtml = accumulatedContent.includes('<img');
                       updated[lastIndex] = {
                         ...updated[lastIndex],
-                        content: isHtml ? accumulatedContent : preprocessModelOutput(accumulatedContent),
+                        content: isHtml ? normalizeCircuitImageContent(accumulatedContent) : preprocessModelOutput(accumulatedContent),
                         isLoading: false  // 关闭加载状态
                       };
                     }
@@ -511,7 +577,7 @@ const CircuitThink = ({ port }) => {
                     const isHtml = accumulatedContent.includes('<img');
                     updated[lastIndex] = {
                       ...updated[lastIndex],
-                      content: isHtml ? accumulatedContent : preprocessModelOutput(accumulatedContent)
+                      content: isHtml ? normalizeCircuitImageContent(accumulatedContent) : preprocessModelOutput(accumulatedContent)
                     };
                   }
                 }
@@ -536,16 +602,8 @@ const CircuitThink = ({ port }) => {
               return updated;
             });
             
-            const completeBotMessage = {
-              content: accumulatedContent,
-              messageId: maxMessageId + 1,
-              sessionId: actualSessionId,
-              userId: userId,
-              userType: MESSAGE_TYPE.BOT,
-            };
-            
             try {
-              await addMessage(completeBotMessage);
+              // 后端 /stream_generate 已自动保存助手消息，前端只负责更新会话标题。
               await updateSessionHeader(actualSessionId, userId, "请分析这张电路图", accumulatedContent, port);
             } catch (error) {
             }
@@ -705,7 +763,7 @@ const CircuitThink = ({ port }) => {
                     const isHtml = accumulatedContent.includes('<img');
                     updated[currentBotMessageIndex] = {
                       ...updated[currentBotMessageIndex],
-                      content: isHtml ? accumulatedContent : preprocessModelOutput(accumulatedContent),
+                      content: isHtml ? normalizeCircuitImageContent(accumulatedContent) : preprocessModelOutput(accumulatedContent),
                       isLoading: false  // 关闭加载状态
                     };
                   }
@@ -714,7 +772,7 @@ const CircuitThink = ({ port }) => {
                   const isHtml = accumulatedContent.includes('<img');
                   updated[currentBotMessageIndex] = {
                     ...updated[currentBotMessageIndex],
-                    content: isHtml ? accumulatedContent : preprocessModelOutput(accumulatedContent)
+                    content: isHtml ? normalizeCircuitImageContent(accumulatedContent) : preprocessModelOutput(accumulatedContent)
                   };
                 }
               }
@@ -737,17 +795,8 @@ const CircuitThink = ({ port }) => {
             return updated;
           });
           
-          // ✅ 统一架构：前端负责保存助手回复，与TCAD/Chatbot保持一致
-          const completeBotMessage = {
-            content: accumulatedContent,
-            messageId: skipUserMessage ? maxMessageId + 1 : maxMessageId + 2,
-            sessionId: actualSessionId,
-            userId: userId,
-            userType: MESSAGE_TYPE.BOT,
-          };
-          
           try {
-            await addMessage(completeBotMessage);
+            // 后端 /stream_generate 已自动保存助手消息，前端只负责更新会话标题。
             await updateSessionHeader(actualSessionId, userId, userMessage, accumulatedContent, port);
           } catch (error) {
           }
@@ -857,10 +906,16 @@ const CircuitThink = ({ port }) => {
         }
 
         // 确保会话存在
-        if (!currentSessionId) {
-          currentSessionId = await createSession(userId, "CircuitThink文件上传会话");
-          setSessionId(currentSessionId);
-          Cookies.set(COOKIE_KEY, currentSessionId);
+        if (!currentSessionId || currentSessionId === DEFAULT_SESSION) {
+          const fallbackSessionId = await createRealSessionAfterChat(MODEL_ID);
+          if (!fallbackSessionId) {
+            message.error('创建会话失败');
+            onError(new Error('创建会话失败'));
+            return;
+          }
+          currentSessionId = fallbackSessionId;
+          setSessionId(fallbackSessionId);
+          Cookies.set(COOKIE_KEY, fallbackSessionId, { expires: 7 });
         }
 
         const maxMessageId = await getMaxMessageId();
@@ -891,7 +946,7 @@ const CircuitThink = ({ port }) => {
                 
                 // 优先使用Circuit API返回的HTML内容
                 if (response.content && response.content.includes('<img')) {
-                  userMessageContent = response.content;
+                  userMessageContent = normalizeCircuitImageContent(response.content);
                 } else if (response.content) {
                   userMessageContent = response.content;
                 } else {
@@ -916,7 +971,12 @@ const CircuitThink = ({ port }) => {
                   userType: MESSAGE_TYPE.USER,
                 };
 
-                await addMessage(userUploadMessage);
+                const saveUploadResult = await addMessage(userUploadMessage);
+                if (!saveUploadResult || saveUploadResult.success === false) {
+                  message.error('上传消息保存失败，请稍后重试');
+                  onError(new Error('上传消息保存失败'));
+                  return;
+                }
                 
                 // 添加用户消息到前端显示
                 setMessages(prevMessages => {
@@ -1076,13 +1136,13 @@ const CircuitThink = ({ port }) => {
 
   // =============== 渲染 ===============
   return (
-    <div className='tcad'>
+    <div className='circuit-page'>
       {!messages.length && (
-        <div className='tcad-empty'>
-          <div className='tcad-title'>您好，我是网表大模型</div>
-          <div className='tcad-question'>有什么电路相关问题？</div>
-          <div className='tcad-intro'>支持将电路图像转换为SPICE网表并解决电路相关问题</div>
-          <div className='tcad-intro'>请上传您需要转换的电路图像并提问</div>
+        <div className='circuit-empty'>
+          <div className='circuit-title'>您好，我是网表大模型</div>
+          <div className='circuit-question'>有什么电路相关问题？</div>
+          <div className='circuit-intro'>支持将电路图像转换为SPICE网表并解决电路相关问题</div>
+          <div className='circuit-intro'>请上传您需要转换的电路图像并提问</div>
         </div>
       )}
       
@@ -1109,7 +1169,7 @@ const CircuitThink = ({ port }) => {
         </div>
       )}
       
-      <div className='tcad-footer'>
+      <div className='circuit-footer'>
         <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
           <Form
             form={form}

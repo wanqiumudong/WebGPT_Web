@@ -4,8 +4,9 @@
  */
 import Cookies from 'js-cookie';
 import { createRealSessionAfterChat, DEFAULT_SESSION } from '../components/history/history';
+import { BACKEND_BASE_URL } from '../config/endpoints';
 
-const API_BASE_URL = 'http://10.98.64.22:8080';
+const API_BASE_URL = BACKEND_BASE_URL;
 
 /**
  * 模块ID映射表

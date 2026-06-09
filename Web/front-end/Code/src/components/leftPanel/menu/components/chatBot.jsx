@@ -13,16 +13,16 @@ const ChatBot = (props) => {
       <g
         id='页面-1'
         stroke='none'
-        stroke-width='1'
+        strokeWidth='1'
         fill='none'
-        fill-rule='evenodd'
+        fillRule='evenodd'
       >
         <g
           id='首页'
           transform='translate(-44.000000, -339.000000)'
           fill={isSelected ? '#1888FF' : '#333333'}
           stroke={isSelected ? '#1888FF' : '#333333'}
-          fill-rule='nonzero'
+          fillRule='nonzero'
         >
           <g id='编组-4' transform='translate(26.000000, 212.000000)'>
             <g id='小助手' transform='translate(18.000000, 127.000000)'>

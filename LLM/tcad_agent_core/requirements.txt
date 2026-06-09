@@ -1,0 +1,8 @@
+requests>=2.31.0
+prompt_toolkit>=3.0.0
+Flask>=3.0.0
+flask-cors>=4.0.0
+mcp>=1.0.0
+anyio>=4.0.0
+httpx>=0.28.0
+uvicorn>=0.30.0

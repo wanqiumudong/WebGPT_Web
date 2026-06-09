@@ -13,9 +13,9 @@ const Person = (props) => {
         <div className='email'>{email}</div>
         <div className='research'>研究领域：</div>
         <div className='research-list'>
-          {research?.map((item) => {
+          {research?.map((item, index) => {
             return (
-              <div className='research-item'>
+              <div className='research-item' key={`${title || 'person'}-research-${index}`}>
                 <div className='research-dot'></div>
                 <div className='research-info'>{item}</div>
               </div>

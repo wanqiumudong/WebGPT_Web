@@ -1,0 +1,17 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# TCAD runtime artifacts
+runtime/
+reports/
+sessions/
+
+*.log
+*.plt
+*.tdr
+*.tdrdat
+
+# Auto-generated regression run folders
+deliverables/tutorial_suite/run_*/
+deliverables/lessons_suite/run_*/

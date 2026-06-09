@@ -1,0 +1,25 @@
+{
+  "case_id": "nmos_compact_model",
+  "source_case": "mw11_f01_01",
+  "description": "基于二维 SOI nMOS 参考 Id-Vg / Id-Vd 曲线整理的 behavioral compact-model 参数卡。",
+  "model_form": "curve_matched_behavioral_overlay",
+  "VTH0": 0.7,
+  "KP": 0.0007436,
+  "NFACTOR": 2.2,
+  "RS": 2.0,
+  "RD": 2.0,
+  "curve_metrics": {
+    "ION": 3.43807606939007e-05,
+    "IOFF": 2.2749604707272e-17,
+    "GM_MAX": 5.365582099003113e-05,
+    "SS_MV_DEC": 823.98,
+    "IDSAT": 0.000260922064550687
+  },
+  "provenance": {
+    "VTH0": "由 transfer curve 的 constant-current 门限近似得到。",
+    "KP": "由 output curve 饱和电流反推并做稳定化处理。",
+    "NFACTOR": "由亚阈值区趋势估算。",
+    "RS": "接口预留参数，便于连接后续电路级验证。",
+    "RD": "接口预留参数，便于连接后续电路级验证。"
+  }
+}

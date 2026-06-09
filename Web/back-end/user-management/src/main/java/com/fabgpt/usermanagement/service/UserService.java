@@ -5,7 +5,13 @@ import com.fabgpt.usermanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -13,20 +19,72 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private static final String DEFAULT_GPTSERVER_LOGIN_URL = "http://127.0.0.1:5107/login";
+
     @Autowired
     private UserRepository userRepository;
 
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+
     // 用户认证（包含有效期检查）
     public User authenticateUser(String username, String password) {
-        Optional<User> userOpt = userRepository.findByUsernameAndPasswordAndStatusActive(username, password);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            // 更新最后登录时间
-            user.setLastLogin(new Date());
-            userRepository.save(user);
-            return user;
+        if (username == null || password == null) {
+            return null;
         }
-        return null;
+
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return null;
+        }
+
+        if (!authenticateAgainstGptServer(username, password)) {
+            return null;
+        }
+
+        User user = userOpt.get();
+        user.setLastLogin(new Date());
+        return userRepository.save(user);
+    }
+
+    private boolean authenticateAgainstGptServer(String username, String password) {
+        String loginUrl = System.getenv("WEB_FABGPT_GPTSERVER_LOGIN_URL");
+        if (loginUrl == null || loginUrl.trim().isEmpty()) {
+            loginUrl = DEFAULT_GPTSERVER_LOGIN_URL;
+        }
+
+        String payload = String.format(
+                "{\"username\":\"%s\",\"password\":\"%s\"}",
+                escapeJson(username),
+                escapeJson(password)
+        );
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(loginUrl))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                .build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+            return response.statusCode() == 200;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String escapeJson(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 
     // 获取所有用户
@@ -51,14 +109,12 @@ public class UserService {
             return null;
         }
 
-        // 解析日期字符串
         if (expireDateStr != null && !expireDateStr.trim().isEmpty()) {
             try {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 Date expireDate = sdf.parse(expireDateStr);
                 user.setExpireDate(expireDate);
             } catch (Exception e) {
-                // 尝试另一种日期格式
                 try {
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Date expireDate = sdf.parse(expireDateStr);
@@ -68,7 +124,7 @@ public class UserService {
                 }
             }
         } else {
-            user.setExpireDate(null); // 清除有效期，表示永久有效
+            user.setExpireDate(null);
         }
 
         return userRepository.save(user);
@@ -78,7 +134,7 @@ public class UserService {
     public User disableUser(Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
-            user.setStatus(0); // 设置状态为0（禁用）
+            user.setStatus(0);
             return userRepository.save(user);
         }
         return null;
@@ -88,7 +144,7 @@ public class UserService {
     public User enableUser(Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
-            user.setStatus(1); // 设置状态为1（启用）
+            user.setStatus(1);
             return userRepository.save(user);
         }
         return null;

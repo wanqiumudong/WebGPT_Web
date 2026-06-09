@@ -1,8 +1,7 @@
 import { message } from 'antd';
 import Cookies from 'js-cookie';
 
-// const BASE_URL = 'http://10.98.193.23:2226';
-// target: 'http://10.98.193.23:5002',
+// Legacy hard-coded targets were removed. Use the centralized endpoint config instead.
 
 const request = async (options) => {
   const { url, baseUrl, method, data, headers = {}, type = '' } = options;

@@ -12,6 +12,8 @@ import { Dropdown, Menu, Tooltip } from 'antd';
 import { useDispatch } from 'react-redux';
 import { updateMainPage } from '../../store/pageStore';
 import { DEFAULT_SESSION, createRealSessionAfterChat, isDefaultSession } from '../../components/history/history';
+import { BACKEND_BASE_URL, RAG_MANAGER_BASE_URL } from '../../config/endpoints';
+import { normalizeIdentity, resolveCurrentUserId } from '../../utils/userIdentity';
 
 const Chatbot = ({ port }) => {
   const [form] = Form.useForm();
@@ -20,9 +22,19 @@ const Chatbot = ({ port }) => {
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState([]);
   const username = Cookies.get('user');
-  const userId = Cookies.get('userid') || Cookies.get('userId');
+  const userId = normalizeIdentity(Cookies.get('userid')) || normalizeIdentity(Cookies.get('userId'));
+  const effectiveUserId = useMemo(
+    () => resolveCurrentUserId({ preferredUserId: userId, preferredUsername: username }),
+    [userId, username]
+  );
+  const persistedUserId = useMemo(
+    () => normalizeIdentity(userId) || effectiveUserId,
+    [effectiveUserId, userId]
+  );
   const [fileList, setFileList] = useState([]);
-  const [sessionId, setSessionId] = useState(Cookies.get(5));
+  const [sessionId, setSessionId] = useState(
+    () => normalizeIdentity(Cookies.get('chatbot_sessionId')) || normalizeIdentity(Cookies.get(5)) || DEFAULT_SESSION
+  );
   const [streamConnection, setStreamConnection] = useState(null);
   
   const [dynamicThinkingText, setDynamicThinkingText] = useState('思考中...');
@@ -33,15 +45,56 @@ const Chatbot = ({ port }) => {
   const [currentRagConfig, setCurrentRagConfig] = useState(null);
   const [switchingRag, setSwitchingRag] = useState(false);
   const dispatch = useDispatch();
-  
-  // 随机选择Chatbot端口函数
-  const getRandomChatbotPort = () => {
-    const chatbotPorts = [5002, 5012, 5013, 5022];
-    const randomPort = chatbotPorts[Math.floor(Math.random() * chatbotPorts.length)];
-    return randomPort;
-  };
-  
-  const API_BASE_URL = `http://10.98.64.22:8080`;
+
+  const API_BASE_URL = BACKEND_BASE_URL;
+  const RAG_API_BASE_URL = RAG_MANAGER_BASE_URL;
+
+  const getChatbotSessionCookie = useCallback(
+    () => normalizeIdentity(Cookies.get('chatbot_sessionId')) || normalizeIdentity(Cookies.get(5)) || DEFAULT_SESSION,
+    []
+  );
+
+  const buildClientMessageId = useCallback(
+    () => `chatbot-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    []
+  );
+
+  const ensureActiveSessionId = useCallback(
+    async (candidateSessionId = sessionId) => {
+      let currentSessionId = normalizeIdentity(candidateSessionId) || getChatbotSessionCookie();
+
+      if (!currentSessionId || currentSessionId === DEFAULT_SESSION) {
+        const newSessionId = await createRealSessionAfterChat(0);
+        if (!newSessionId) {
+          throw new Error('创建会话失败');
+        }
+        currentSessionId = newSessionId;
+      } else {
+        try {
+          const response = await fetch(`${API_BASE_URL}/session/get?sessionId=${encodeURIComponent(currentSessionId)}`);
+          if (!response.ok) {
+            const newSessionId = await createRealSessionAfterChat(0);
+            if (!newSessionId) {
+              throw new Error('创建会话失败');
+            }
+            currentSessionId = newSessionId;
+          }
+        } catch (error) {
+          const newSessionId = await createRealSessionAfterChat(0);
+          if (!newSessionId) {
+            throw new Error('创建会话失败');
+          }
+          currentSessionId = newSessionId;
+        }
+      }
+
+      setSessionId(currentSessionId);
+      Cookies.set('chatbot_sessionId', currentSessionId, { expires: 7 });
+      Cookies.set(5, currentSessionId, { expires: 7 });
+      return currentSessionId;
+    },
+    [API_BASE_URL, getChatbotSessionCookie, sessionId]
+  );
   
   const startThinkingAnimation = useCallback(() => {
     if (thinkingIntervalRef.current) return;
@@ -79,44 +132,30 @@ const Chatbot = ({ port }) => {
         localStorage.setItem(`ragConfig_${sessionId}`, 'none');
         
         try {
-          let response = await fetch(`http://localhost:5100/set_active_configuration`, {
+          const response = await fetch(`${RAG_API_BASE_URL}/set_active_configuration`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config_id: 'none' })
-          });
-          
-          if (!response.ok) {
-            response = await fetch(`http://localhost:5100/set_active_configuration`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ config_id: 'none' })
-            });
-          }
+            body: JSON.stringify({ config_id: 'none', user_id: effectiveUserId })
+          });          
           
           if (previousConfig !== 'none') {
             const switchMessage = {
               content: "已禁用知识库功能",
+              messageId: buildClientMessageId(),
               modelId: 0,
               userType: MESSAGE_TYPE.BOT,
               timestamp: new Date().toISOString(),
               sessionId: sessionId,
-              userId: userId
+              userId: persistedUserId
             };
-            
-            const messageListResponse = await fetch(`${API_BASE_URL}/message/list-all`);
-            if (messageListResponse.ok) {
-              const allMessages = await messageListResponse.json();
-              const maxMessageId = allMessages?.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
-              switchMessage.messageId = maxMessageId + 1;
-            }
-            
+
             setMessages(prev => [...prev, switchMessage]);
-            
-            await fetch(`${API_BASE_URL}/message/add`, {
+
+            fetch(`${API_BASE_URL}/message/add`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(switchMessage),
-            });
+            }).catch(error => console.error('保存知识库切换消息失败:', error));
             
             message.success({ content: '已禁用知识库功能', key: 'switchRag' });
           } else {
@@ -130,19 +169,11 @@ const Chatbot = ({ port }) => {
         return;
       }
       
-      let response = await fetch(`http://localhost:5100/set_active_configuration`, {
+      const response = await fetch(`${RAG_API_BASE_URL}/set_active_configuration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config_id: key })
-      });
-      
-      if (!response.ok) {
-        response = await fetch(`http://localhost:5100/set_active_configuration`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config_id: key })
-        });
-      }
+        body: JSON.stringify({ config_id: key, user_id: effectiveUserId })
+      });      
       
       if (response.ok) {
         setCurrentRagConfig(key);
@@ -152,27 +183,21 @@ const Chatbot = ({ port }) => {
         if (newConfig && previousConfig !== key) {
           const switchMessage = {
             content: `已切换知识库到: ${newConfig.name}`,
+            messageId: buildClientMessageId(),
             modelId: 0,
             userType: MESSAGE_TYPE.BOT,
             timestamp: new Date().toISOString(),
             sessionId: sessionId,
-            userId: userId
+            userId: persistedUserId
           };
-          
-          const messageListResponse = await fetch(`${API_BASE_URL}/message/list-all`);
-          if (messageListResponse.ok) {
-            const allMessages = await messageListResponse.json();
-            const maxMessageId = allMessages?.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
-            switchMessage.messageId = maxMessageId + 1;
-          }
-          
+
           setMessages(prev => [...prev, switchMessage]);
-          
-          await fetch(`${API_BASE_URL}/message/add`, {
+
+          fetch(`${API_BASE_URL}/message/add`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(switchMessage),
-          });
+          }).catch(error => console.error('保存知识库切换消息失败:', error));
           
           message.success({ content: `已切换到知识库: ${newConfig.name}`, key: 'switchRag' });
         } else {
@@ -187,23 +212,12 @@ const Chatbot = ({ port }) => {
     } finally {
       setSwitchingRag(false);
     }
-  }, [streaming, currentRagConfig, sessionId, userId, port, ragConfigurations]);
+  }, [API_BASE_URL, buildClientMessageId, currentRagConfig, effectiveUserId, persistedUserId, port, ragConfigurations, sessionId, streaming]);
   
   const fetchRagConfigurations = useCallback(async () => {
     try {
       const savedConfig = localStorage.getItem(`ragConfig_${sessionId}`);
-      
-      // 尝试通过Chatbot服务获取RAG配置(支持负载均衡)
-      const selectedPort = getRandomChatbotPort();
-      let response;
-      
-      try {
-        // 优先尝试通过负载均衡器获取配置
-        response = await fetch(`http://10.98.64.22:5100/get_rag_configurations?user_id=${userId}`);
-      } catch (error) {
-        // 如果负载均衡器不可用，回退到直接访问RAG Manager
-        response = await fetch(`http://10.98.64.22:5100/get_rag_configurations?user_id=${userId}`);
-      }
+      const response = await fetch(`${RAG_API_BASE_URL}/get_rag_configurations?user_id=${encodeURIComponent(effectiveUserId)}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -234,7 +248,7 @@ const Chatbot = ({ port }) => {
     } catch (error) {
       setRagConfigurations([]);
     }
-  }, [sessionId, getRandomChatbotPort]);
+  }, [sessionId, effectiveUserId]);
   
   const beforeUpload = (file) => {
     setFileList([]);
@@ -248,24 +262,7 @@ const Chatbot = ({ port }) => {
   const onUploadFile = useCallback(
     async (file, onSuccess, onError) => {
       try {
-        let currentSessionId = Cookies.get('chatbot_sessionId');
-
-        if (currentSessionId && currentSessionId !== sessionId) {
-          setSessionId(currentSessionId);
-        }
-
-        if (currentSessionId === DEFAULT_SESSION) {
-          const newSessionId = await createRealSessionAfterChat(1);
-          if (newSessionId) {
-            currentSessionId = newSessionId;
-            setSessionId(newSessionId);
-            Cookies.set('chatbot_sessionId', newSessionId, { expires: 7 });
-          } else {
-            message.error('创建会话失败');
-            onError(new Error('创建会话失败'));
-            return;
-          }
-        }
+        const currentSessionId = await ensureActiveSessionId(sessionId);
 
         var formData = new FormData();
         formData.append('file', file);
@@ -286,36 +283,23 @@ const Chatbot = ({ port }) => {
             onSuccess(response);
             
             if (response.data && response.data.content) {
-              fetch(`${API_BASE_URL}/message/list-all`)
-                .then(res => res.json())
-                .then(allMessages => {
-                  const maxMessageId = allMessages?.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
-                  
-                  const botResponseMessage = {
-                    content: response.data.content,
-                    messageId: maxMessageId + 1,
-                    modelId: 0,
-                    sessionId: currentSessionId,
-                    timestamp: new Date().toISOString(),
-                    userId: userId,
-                    userType: MESSAGE_TYPE.BOT,
-                  };
-                  
-                  setMessages(prevMessages => [...prevMessages, botResponseMessage]);
-                  
-                  fetch(`${API_BASE_URL}/message/add`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(botResponseMessage),
-                  }).catch(err => console.error('保存机器人图片响应消息失败:', err));
-                })
-                .catch(err => {
-                  const botResponseMessage = {
-                    content: response.data.content,
-                    userType: MESSAGE_TYPE.BOT,
-                  };
-                  setMessages(prevMessages => [...prevMessages, botResponseMessage]);
-                });
+              const botResponseMessage = {
+                content: response.data.content,
+                messageId: buildClientMessageId(),
+                modelId: 0,
+                sessionId: currentSessionId,
+                timestamp: new Date().toISOString(),
+                userId: persistedUserId,
+                userType: MESSAGE_TYPE.BOT,
+              };
+
+              setMessages(prevMessages => [...prevMessages, botResponseMessage]);
+
+              fetch(`${API_BASE_URL}/message/add`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(botResponseMessage),
+              }).catch(err => console.error('保存机器人图片响应消息失败:', err));
             }
           } else {
             onError(response);
@@ -328,7 +312,7 @@ const Chatbot = ({ port }) => {
         onError(error);
       }
     },
-    [sessionId, username, port, setSessionId, setMessages, userId]
+    [API_BASE_URL, buildClientMessageId, ensureActiveSessionId, persistedUserId, port, sessionId, username]
   );
   
   const uploadProps = useMemo(() => {
@@ -380,38 +364,29 @@ const Chatbot = ({ port }) => {
   
   const onhandleFinished = async () => {
     const values = await form.getFieldsValue();
-    if (!values?.content) return;
+    const content = values?.content?.trim();
+    if (!content) return;
     
     setLoading(true);
     setStreaming(true);
     
-    let actualSessionId = sessionId;
-    let isInDefaultSession = sessionId === DEFAULT_SESSION;
-    
-    if (isInDefaultSession) {
-      const newSessionId = await createRealSessionAfterChat(0);
-      if (newSessionId) {
-        actualSessionId = newSessionId;
-        setSessionId(newSessionId);
-      } else {
-        setLoading(false);
-        setStreaming(false);
-        message.error('创建会话失败');
-        return;
-      }
+    let actualSessionId;
+    try {
+      actualSessionId = await ensureActiveSessionId(sessionId);
+    } catch (error) {
+      setLoading(false);
+      setStreaming(false);
+      message.error('创建会话失败');
+      return;
     }
     
-    const messageListResponse = await fetch(`${API_BASE_URL}/message/list-all`);
-    const allMessages = await messageListResponse.json();
-    const maxMessageId = allMessages.length ? Math.max(...allMessages.map(msg => msg.messageId)) : 0;
-    
     const newMessage = {
-      content: values.content,
-      messageId: maxMessageId + 1,
+      content,
+      messageId: buildClientMessageId(),
       modelId: 0,
       sessionId: actualSessionId,
       timestamp: new Date().toISOString(),
-      userId: userId,
+      userId: persistedUserId,
       userType: MESSAGE_TYPE.USER,
     };
     
@@ -419,11 +394,11 @@ const Chatbot = ({ port }) => {
     
     const tempBotMessage = {
       content: loadingText,
-      messageId: maxMessageId + 2,
+      messageId: buildClientMessageId(),
       modelId: 0,
       sessionId: actualSessionId,
       timestamp: new Date().toISOString(),
-      userId: userId,
+      userId: persistedUserId,
       userType: MESSAGE_TYPE.BOT,
       streaming: true,
       isLoading: true
@@ -431,27 +406,28 @@ const Chatbot = ({ port }) => {
     
     const currentMessages = Array.isArray(messages) ? messages : [];
     const submitMessages = [...currentMessages, newMessage, tempBotMessage];
-    
-    await fetch(`${API_BASE_URL}/message/add`, {
+
+    setMessages(submitMessages);
+    await form.resetFields();
+
+    fetch(`${API_BASE_URL}/message/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newMessage),
-    });
-    
-    setMessages(submitMessages);
-    await form.resetFields();
+    }).catch(error => console.error('保存用户消息时出错:', error));
     
     startThinkingAnimation();
     
     const params = {
-      user_id: username,
-      message: values.content,
+      user_id: effectiveUserId,
+      message: content,
       conversation_id: actualSessionId,
       config_id: currentRagConfig === 'none' ? 'none' : (currentRagConfig || 'default')
     };
     
     try {
       let fullResponse = '';
+      let abortedLocally = false;
       
       streamRequestRef.current = fetchChatBotStreaming(
         params, 
@@ -477,6 +453,7 @@ const Chatbot = ({ port }) => {
             }
             
             if (data.aborted) {
+              abortedLocally = true;
               setMessages(prevMessages => {
                 const updatedMessages = [...prevMessages];
                 const lastIndex = updatedMessages.length - 1;
@@ -529,15 +506,18 @@ const Chatbot = ({ port }) => {
           setLoading(false);
           
           stopThinkingAnimation();
+
+          if (abortedLocally) {
+            return;
+          }
           
-          const botMessageId = maxMessageId + 2;
           const finalBotMessage = {
             content: fullResponse,
-            messageId: botMessageId,
+            messageId: tempBotMessage.messageId,
             modelId: 0,
             sessionId: actualSessionId,
             timestamp: new Date().toISOString(),
-            userId: userId,
+            userId: persistedUserId,
             userType: MESSAGE_TYPE.BOT,
           };
           
@@ -614,7 +594,7 @@ const Chatbot = ({ port }) => {
                 modelId: 0,
                 sessionId: actualSessionId,
                 status: 1,
-                userId: userId,
+                userId: persistedUserId,
               };
               
               await fetch(`${API_BASE_URL}/session/update`, {
@@ -659,14 +639,14 @@ const Chatbot = ({ port }) => {
   
   useEffect(() => {
     const handleSessionChange = () => {
-      const newSessionId = Cookies.get(5);
+      const newSessionId = getChatbotSessionCookie();
       if (newSessionId !== sessionId) {
         setSessionId(newSessionId);
       }
     };
     const interval = setInterval(handleSessionChange, 1000);
     return () => clearInterval(interval);
-  }, [sessionId]);
+  }, [getChatbotSessionCookie, sessionId]);
   
   useEffect(() => {
     if (sessionId && sessionId !== DEFAULT_SESSION) {
@@ -686,7 +666,12 @@ const Chatbot = ({ port }) => {
             isLoading: false
           }));
           
-          setMessages(formattedMessages);
+          setMessages(prevMessages => {
+            if (Array.isArray(prevMessages) && prevMessages.some(msg => msg.streaming)) {
+              return prevMessages;
+            }
+            return formattedMessages;
+          });
         })
         .catch(error => {
           setMessages([]);
@@ -696,11 +681,11 @@ const Chatbot = ({ port }) => {
     } else {
       setMessages([]);
     }
-  }, [sessionId]);
+  }, [API_BASE_URL, sessionId]);
   
   useEffect(() => {
     fetchRagConfigurations();
-  }, []); // 只在组件挂载时执行一次
+  }, [fetchRagConfigurations]);
   
   useEffect(() => {
     return () => {

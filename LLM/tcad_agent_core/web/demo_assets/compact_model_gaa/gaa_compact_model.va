@@ -1,0 +1,30 @@
+`include "constants.vams"
+`include "disciplines.vams"
+
+module gaa_compact_model(d, g, s, b);
+  inout d, g, s, b;
+  electrical d, g, s, b;
+
+  parameter real VTH0 = 0.1880;
+  parameter real KP = 0.0014758;
+  parameter real NFACTOR = 1.600;
+  parameter real LAMBDA = 0.1088;
+  parameter real RS = 2.00;
+  parameter real RD = 2.00;
+
+  analog begin
+    real vgs, vds, vt, nvt, soft_vgt, ids_lin, ids_sat, ids;
+    vt = 0.02585;
+    nvt = max(NFACTOR * vt, 1e-6);
+    vgs = V(g, s);
+    vds = V(d, s);
+    soft_vgt = nvt * ln(1.0 + exp((vgs - VTH0) / nvt));
+
+    ids_sat = 0.5 * KP * soft_vgt * soft_vgt;
+    ids_lin = KP * (soft_vgt * vds - 0.5 * vds * vds);
+    ids = (vds < soft_vgt) ? ids_lin : ids_sat;
+    ids = ids * (1.0 + LAMBDA * max(vds, 0.0));
+
+    I(d, s) <+ ids;
+  end
+endmodule

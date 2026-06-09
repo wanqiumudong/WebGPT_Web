@@ -24,7 +24,13 @@ const MenuItem = (props) => {
       <div className='popover-content'>
         {menuItem.children.length ? (
           menuItem.children.map((item) => (
-            <div onClick={() => handleClick(name, item.key)} className={classNames('popover-item', isSelected && subSelectKey === item.key && 'popover-item-select')}>{item.name}</div>
+            <div
+              key={item.key}
+              onClick={() => handleClick(name, item.key)}
+              className={classNames('popover-item', isSelected && subSelectKey === item.key && 'popover-item-select')}
+            >
+              {item.name}
+            </div>
           ))
         ) : (
           <div onClick={() => handleClick(name, name)} className={classNames('popover-item', isSelected && 'popover-item-select')}>{menuItem.name}</div>

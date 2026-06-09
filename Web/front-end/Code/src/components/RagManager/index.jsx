@@ -11,43 +11,19 @@ import {
 import { useSelector } from 'react-redux';
 import Cookies from 'js-cookie';
 import './index.css';
+import { buildBaseUrl } from '../../config/endpoints';
+import { resolveCurrentUserId } from '../../utils/userIdentity';
 
 const { Paragraph, Text } = Typography;
 const { Option } = Select;
 
-const RagManager = ({ port = 5100, userId }) => {
+const RagManager = ({ port = 5106, userId }) => {
   // 在组件顶层获取Redux状态
   const reduxUsername = useSelector(state => state.UserState?.username);
-  
-  // 获取用户ID的逻辑 - 最终版本
-  const getCurrentUserId = () => {
-    // 1. 优先使用传入的userId参数
-    if (userId) return userId;
-    
-    // 2. 从Redux store获取
-    if (reduxUsername) return reduxUsername;
-    
-    // 3. 从Cookie获取 - 最重要的方式
-    const cookieUser = Cookies.get('user');
-    if (cookieUser) return cookieUser;
-    
-    // 4. 从localStorage获取
-    const storedUserId = localStorage.getItem('currentUserId');
-    if (storedUserId) return storedUserId;
-    
-    // 5. 从URL参数获取
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlUserId = urlParams.get('userId') || urlParams.get('user_id');
-    if (urlUserId) {
-      localStorage.setItem('currentUserId', urlUserId);
-      return urlUserId;
-    }
-    
-    // 6. 使用默认用户ID
-    return 'admin';
-  };
-
-  const [currentUserId] = useState(() => getCurrentUserId());
+  const [currentUserId] = useState(() =>
+    resolveCurrentUserId({ preferredUserId: userId, preferredUsername: reduxUsername || Cookies.get('user') })
+  );
+  const ragBaseUrl = buildBaseUrl(port);
   // 基本状态
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -121,7 +97,7 @@ const RagManager = ({ port = 5100, userId }) => {
     if (documents.length === 0 && stats.documents_count === 0) return;
     
     try {
-      const response = await fetch(`http://10.98.64.22:${port}/save_user_session_state`, {
+      const response = await fetch(`${ragBaseUrl}/save_user_session_state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,9 +121,9 @@ const RagManager = ({ port = 5100, userId }) => {
   };
 
   // 恢复会话状态
-  const restoreSessionState = async () => {
+  const restoreSessionState = async (configId = currentConfig) => {
     try {
-      const response = await fetch(`http://10.98.64.22:${port}/get_user_session_state?user_id=${currentUserId}&config_id=${currentConfig}`, {
+      const response = await fetch(`${ragBaseUrl}/get_user_session_state?user_id=${currentUserId}&config_id=${configId}`, {
         signal: AbortSignal.timeout(5000),
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -193,9 +169,10 @@ const RagManager = ({ port = 5100, userId }) => {
       
       (async () => {
         try {
-          await fetchConfigurations();
-          const sessionRestored = await restoreSessionState();
-          await fetchUserTasks();
+          const activeConfigId = await fetchConfigurations();
+          const targetConfigId = activeConfigId || currentConfig;
+          const sessionRestored = await restoreSessionState(targetConfigId);
+          await fetchUserTasks(targetConfigId);
           
           if (isMounted && !sessionRestored) {
             await fetchRagDocuments(false);
@@ -222,8 +199,9 @@ const RagManager = ({ port = 5100, userId }) => {
     if (!isInitialized || !currentConfig) return;
     
     const timeoutId = setTimeout(() => {
+      fetchUserTasks(currentConfig);
       if (!processingRef.current) {
-        fetchRagDocuments(true);
+        fetchRagDocuments(false);
       }
     }, 500);
     
@@ -302,7 +280,7 @@ const RagManager = ({ port = 5100, userId }) => {
   // 从后端获取知识库配置
   const fetchConfigurations = async () => {
     try {
-      const url = `http://10.98.64.22:${port}/get_rag_configurations?user_id=${currentUserId}`;
+      const url = `${ragBaseUrl}/get_rag_configurations?user_id=${currentUserId}`;
       
       const response = await fetch(url);
       if (response.ok) {
@@ -319,6 +297,7 @@ const RagManager = ({ port = 5100, userId }) => {
         if (activeConfig && activeConfig.id !== currentConfig) {
           setCurrentConfig(activeConfig.id);
         }
+        return activeConfig?.id || null;
       } else {
         console.error('获取配置失败, HTTP状态:', response.status);
         const errorText = await response.text();
@@ -328,6 +307,7 @@ const RagManager = ({ port = 5100, userId }) => {
       console.error('获取知识库配置错误:', error);
       message.error('获取知识库配置失败');
     }
+    return null;
   };
   
   // 验证任务是否存在并恢复
@@ -340,7 +320,7 @@ const RagManager = ({ port = 5100, userId }) => {
     const normalizedTaskId = typeof taskId === 'string' && taskId.match(/^\d+$/) ? parseInt(taskId, 10) : taskId;
     
     try {
-      const response = await fetch(`http://10.98.64.22:${port}/check_processing_progress?task_id=${normalizedTaskId}&user_id=${currentUserId}`, {
+      const response = await fetch(`${ragBaseUrl}/check_processing_progress?task_id=${normalizedTaskId}&user_id=${currentUserId}`, {
         signal: AbortSignal.timeout(8000),
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -415,22 +395,28 @@ const RagManager = ({ port = 5100, userId }) => {
   };
   
   // 获取用户任务
-  const fetchUserTasks = async () => {
+  const fetchUserTasks = async (configId = currentConfig) => {
     if (!currentUserId) return;
     
     try {
-      const response = await fetch(`http://10.98.64.22:${port}/get_user_tasks?user_id=${currentUserId}`);
+      const response = await fetch(`${ragBaseUrl}/get_user_tasks?user_id=${currentUserId}&config_id=${configId}`);
       
       if (response.ok) {
         const data = await response.json();
-        
-        const processingTask = data.tasks?.find(task => task.status === 'processing');
+
+        const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        const processingTask = tasks
+          .filter(task =>
+            task.status === 'processing' &&
+            (!task.config_id || String(task.config_id) === String(configId))
+          )
+          .sort((a, b) => (b.start_time || 0) - (a.start_time || 0))[0];
         if (processingTask) {
           const taskId = processingTask.doc_id || processingTask.task_id || processingTask.taskId || processingTask.id;
           
           if (taskId) {
             const fileName = processingTask.file_name || processingTask.fileName || processingTask.original_name || '未知文件';
-            saveTaskToLocalStorage(taskId, fileName, currentConfig);
+            saveTaskToLocalStorage(taskId, fileName, configId);
             
             const normalizedTask = {
               task_id: taskId,
@@ -447,13 +433,13 @@ const RagManager = ({ port = 5100, userId }) => {
           }
         } else {
           const savedTask = getTaskFromLocalStorage();
-          if (savedTask && savedTask.task_id) {
+          if (savedTask && savedTask.task_id && String(savedTask.config_id) === String(configId)) {
             checkTaskExists(savedTask.task_id, savedTask.file_name);
           }
         }
       } else {
         const savedTask = getTaskFromLocalStorage();
-        if (savedTask && savedTask.task_id) {
+        if (savedTask && savedTask.task_id && String(savedTask.config_id) === String(configId)) {
           checkTaskExists(savedTask.task_id, savedTask.file_name);
         }
       }
@@ -461,7 +447,7 @@ const RagManager = ({ port = 5100, userId }) => {
       console.error('获取用户任务错误:', error);
       
       const savedTask = getTaskFromLocalStorage();
-      if (savedTask && savedTask.task_id) {
+      if (savedTask && savedTask.task_id && String(savedTask.config_id) === String(configId)) {
         checkTaskExists(savedTask.task_id, savedTask.file_name);
       }
     }
@@ -471,11 +457,12 @@ const RagManager = ({ port = 5100, userId }) => {
   const fetchRagDocuments = async (forceRefresh = false) => {
     setLoading(true);
     
-    const requestUrl = new URL(`http://10.98.64.22:${port}/get_rag_documents`);
-    requestUrl.searchParams.append('config_id', currentConfig);
-    requestUrl.searchParams.append('user_id', currentUserId);  // 添加用户ID
+    const requestUrl = `${ragBaseUrl}/get_rag_documents`;
+    const searchParams = new URLSearchParams();
+    searchParams.append('config_id', currentConfig);
+    searchParams.append('user_id', currentUserId);  // 添加用户ID
     if (forceRefresh) {
-      requestUrl.searchParams.append('force_refresh', 'true');
+      searchParams.append('force_refresh', 'true');
     }
     
     const loadingKey = 'loadingDocuments';
@@ -486,7 +473,7 @@ const RagManager = ({ port = 5100, userId }) => {
     try {
       const timeoutValue = processing ? 40000 : 20000;
       
-      const response = await fetch(requestUrl.toString(), {
+      const response = await fetch(`${requestUrl}?${searchParams.toString()}`, {
         signal: AbortSignal.timeout(timeoutValue),
         headers: {
           'Cache-Control': 'no-cache',
@@ -625,7 +612,7 @@ const RagManager = ({ port = 5100, userId }) => {
       try {
         const timestamp = new Date().getTime();
         
-        const response = await fetch(`http://10.98.64.22:${port}/get_user_tasks?user_id=${currentUserId}&_t=${timestamp}`, {
+        const response = await fetch(`${ragBaseUrl}/get_user_tasks?user_id=${currentUserId}&config_id=${currentConfig}&_t=${timestamp}`, {
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
@@ -745,9 +732,15 @@ const RagManager = ({ port = 5100, userId }) => {
                 checkInterval = 10000;
               } else if (matchingTask.current_step === 'inserting_data') {
                 checkInterval = 12000;
-              } else if (matchingTask.current_step === 'processing_pdf') {
+              } else if (
+                matchingTask.current_step === 'processing_pdf' ||
+                matchingTask.current_step === 'extracting_text'
+              ) {
                 checkInterval = 8000;
-              } else if (matchingTask.current_step === 'saving_pages') {
+              } else if (
+                matchingTask.current_step === 'saving_pages' ||
+                matchingTask.current_step === 'chunking_text'
+              ) {
                 if (matchingTask.total_pages > 500) {
                   checkInterval = 10000;
                 } else {
@@ -845,7 +838,7 @@ const RagManager = ({ port = 5100, userId }) => {
       message.loading({ content: `正在上传 ${file.name}...`, key: uploadKey });
       
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `http://10.98.64.22:${port}/upload_rag_document`, true);
+      xhr.open('POST', `${ragBaseUrl}/upload_rag_document`, true);
       
       xhr.upload.onprogress = event => {
         if (event.lengthComputable) {
@@ -947,7 +940,7 @@ const RagManager = ({ port = 5100, userId }) => {
           const deleteKey = 'deleteDocument';
           message.loading({ content: '正在删除文档...', key: deleteKey });
           
-          const response = await fetch(`http://10.98.64.22:${port}/delete_rag_document`, {
+          const response = await fetch(`${ragBaseUrl}/delete_rag_document`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -961,7 +954,7 @@ const RagManager = ({ port = 5100, userId }) => {
           if (response.ok) {
             const data = await response.json();
             
-            if (data.deleted) {
+            if (data.deleted || data.success) {
               let successMessage = `文档 "${fileName}" 已成功从知识库中删除`;
               
               message.success({ content: successMessage, key: deleteKey });
@@ -1028,7 +1021,7 @@ const createNewConfiguration = async () => {
   message.loading({ content: '正在创建知识库...', key: loadingKey });
   
   try {
-    const response = await fetch(`http://10.98.64.22:${port}/create_rag_configuration`, {
+    const response = await fetch(`${ragBaseUrl}/create_rag_configuration`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1039,7 +1032,8 @@ const createNewConfiguration = async () => {
   
     if (response.ok) {
       const data = await response.json();
-      message.success({ content: `创建知识库配置"${data.config.display_name || data.config.name || data.config.id}"成功`, key: loadingKey });
+      const config = data.config || data.configuration;
+      message.success({ content: `创建知识库配置"${config?.display_name || config?.name || config?.id || newConfigName}"成功`, key: loadingKey });
       setNewConfigModalVisible(false);
       setNewConfigName('');
       
@@ -1068,7 +1062,7 @@ const setActiveConfiguration = async (configId) => {
   message.loading({ content: '正在设置当前知识库...', key: loadingKey });
   
   try {
-    const response = await fetch(`http://10.98.64.22:${port}/set_active_configuration`, {
+    const response = await fetch(`${ragBaseUrl}/set_active_configuration`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -1080,7 +1074,20 @@ const setActiveConfiguration = async (configId) => {
     
     if (response.ok) {
       const data = await response.json();
-      message.success({ content: data.message || '已设置当前知识库', key: loadingKey });
+      const targetConfig = configurations.find(config => config.id === configId);
+      const configName =
+        data.config_name ||
+        targetConfig?.display_name ||
+        targetConfig?.name ||
+        configId;
+      if (data.warning) {
+        message.warning({ content: data.warning, key: loadingKey, duration: 4 });
+      } else {
+        message.success({
+          content: data.message || `当前知识库已切换为 ${configName}`,
+          key: loadingKey,
+        });
+      }
       
       if (configId !== currentConfig) {
         setDocuments([]);
@@ -1108,7 +1115,7 @@ const setActiveConfiguration = async (configId) => {
         active: config.id === configId
       })));
       
-      setTimeout(() => fetchRagDocuments(true), 500);
+      setTimeout(() => fetchRagDocuments(false), 500);
     } else {
       const data = await response.json();
       message.error({ content: data.error || '设置当前知识库失败', key: loadingKey });
@@ -1150,7 +1157,7 @@ const handleDeleteConfig = async (configId) => {
       message.loading({ content: `正在删除知识库"${configDisplayName}"...`, key: deleteKey });
       
       try {
-        const response = await fetch(`http://10.98.64.22:${port}/delete_rag_configuration`, {
+        const response = await fetch(`${ragBaseUrl}/delete_rag_configuration`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1182,6 +1189,12 @@ const handleDeleteConfig = async (configId) => {
                     setCurrentConfig('default');
                   }
                 }, 5000);
+              } else if (data.partial_success) {
+                message.warning({
+                   content: data.db_delete_error || `知识库"${configDisplayName}"已部分删除`,
+                   key: deleteKey,
+                   duration: 4
+                 });
               } else {
                 // 正常删除完成
                 message.success({
@@ -1473,7 +1486,9 @@ return (
               <div className="processing-details" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Text>
                   <strong>当前阶段:</strong> {' '}
-                  {processingInfo.current_step === 'converting_pdf' ? '转换PDF' :
+                  {processingInfo.current_step === 'extracting_text' ? '提取文本' :
+                  processingInfo.current_step === 'chunking_text' ? '切分文本' :
+                  processingInfo.current_step === 'converting_pdf' ? '转换PDF' :
                   processingInfo.current_step === 'saving_pages' ? '保存页面' :
                   processingInfo.current_step === 'generating_embeddings' ? '生成向量' :
                   processingInfo.current_step === 'inserting_data' ? '存储数据' :
@@ -1533,7 +1548,7 @@ return (
       </div>
                 
       {/* 文档列表 */}
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 350px)' }}>
+      <div className="rag-manager-table-shell">
         <Table
           columns={columns}
           dataSource={documents}

@@ -1,8 +1,11 @@
 #!/bin/bash
 # user_manager.sh - 简洁版用户管理工具
 
-API_BASE="http://localhost:5203/api"
-ORIGINAL_API="http://10.98.64.22:8080"
+USER_MANAGER_PORT="${WEB_FABGPT_USER_MANAGER_PORT:-5108}"
+GPTSERVER_PORT="${WEB_FABGPT_GPTSERVER_PORT:-5107}"
+API_BASE="${WEB_FABGPT_USER_MANAGER_API_BASE:-http://127.0.0.1:${USER_MANAGER_PORT}/api}"
+GPTSERVER_API="${WEB_FABGPT_GPTSERVER_API:-http://127.0.0.1:${GPTSERVER_PORT}}"
+CURL_OPTS=(--silent --show-error --connect-timeout 5 --max-time 15)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -52,7 +55,7 @@ show_users() {
     echo -e "${BLUE}===== FabGPT 用户管理系统 =====${NC}"
     echo ""
     
-    users_json=$(curl -s $API_BASE/users)
+    users_json=$(curl "${CURL_OPTS[@]}" "$API_BASE/users")
     curl_exit_code=$?
     
     if [ $curl_exit_code -ne 0 ] || [ -z "$users_json" ]; then
@@ -178,7 +181,7 @@ create_user() {
     
     echo -e "${YELLOW}正在创建用户...${NC}"
     
-    response=$(curl -s -X POST $ORIGINAL_API/user/add \
+    response=$(curl "${CURL_OPTS[@]}" -X POST "$GPTSERVER_API/user/add" \
         -H "Content-Type: application/json" \
         -d "$json_data")
     
@@ -230,7 +233,7 @@ set_expire() {
         echo -e "${YELLOW}设置有效期至: $expire_date${NC}"
     fi
     
-    response=$(curl -s -X PUT $API_BASE/users/$user_id/expire \
+    response=$(curl "${CURL_OPTS[@]}" -X PUT "$API_BASE/users/$user_id/expire" \
         -H "Content-Type: application/json" \
         -d "$json_data")
     
@@ -247,7 +250,7 @@ disable_user() {
         return 1
     fi
     
-    curl -s -X PUT $API_BASE/users/$user_id/disable > /dev/null
+    curl "${CURL_OPTS[@]}" -X PUT "$API_BASE/users/$user_id/disable" > /dev/null
     echo -e "${GREEN}✅ 用户已禁用${NC}"
     show_users
 }
@@ -261,7 +264,7 @@ enable_user() {
         return 1
     fi
     
-    curl -s -X PUT $API_BASE/users/$user_id/enable > /dev/null
+    curl "${CURL_OPTS[@]}" -X PUT "$API_BASE/users/$user_id/enable" > /dev/null
     echo -e "${GREEN}✅ 用户已启用${NC}"
     show_users
 }
@@ -278,7 +281,8 @@ reset_password() {
     fi
     
     # 获取用户信息
-    user_info=$(curl -s $API_BASE/users/$user_id)
+    user_info=$(curl "${CURL_OPTS[@]}" "$API_BASE/users/$user_id")
+    curl_exit_code=$?
     
     if [ $curl_exit_code -ne 0 ] || [ -z "$user_info" ]; then
         echo -e "${RED}❌ 获取用户信息失败或用户不存在${NC}"
@@ -359,7 +363,7 @@ except:
     echo -e "${YELLOW}正在更新密码...${NC}"
     
     # 发送更新请求到原始API
-    response=$(curl -s -X POST $ORIGINAL_API/user/update \
+    response=$(curl "${CURL_OPTS[@]}" -X POST "$GPTSERVER_API/user/update" \
         -H "Content-Type: application/json" \
         -d "$json_data")
     
@@ -393,7 +397,7 @@ delete_user() {
     fi
     
     # 获取用户信息确认
-    user_info=$(curl -s $API_BASE/users/$user_id)
+    user_info=$(curl "${CURL_OPTS[@]}" "$API_BASE/users/$user_id")
     username=$(echo "$user_info" | python3 -c "
 import json, sys
 try:
@@ -412,7 +416,7 @@ except:
     read -p "确认删除? (y/N): " confirm
     
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-        curl -s $ORIGINAL_API/user/delete?userId=$user_id > /dev/null
+        curl "${CURL_OPTS[@]}" "$GPTSERVER_API/user/delete?userId=$user_id" > /dev/null
         sleep 2
         echo -e "${GREEN}✅ 用户删除请求已发送${NC}"
         show_users

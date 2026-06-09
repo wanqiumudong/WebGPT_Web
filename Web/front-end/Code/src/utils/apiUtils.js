@@ -3,50 +3,57 @@
  * 标准化所有模块的API调用格式
  */
 
+import {
+  BACKEND_BASE_URL,
+  CHATBOT_BASE_URL,
+  CIRCUIT_BASE_URL,
+  DEFECT_BASE_URL,
+  LITHO_BASE_URL,
+  RAG_MANAGER_BASE_URL,
+  SERVICE_HOST,
+  SERVICE_PORTS,
+  TCAD_BASE_URL,
+  buildBaseUrl,
+} from '../config/endpoints';
+
 /**
  * 模块端口映射 - 实际部署端口配置
  */
 export const MODULE_PORTS = {
-  CHATBOT: 5003,        // 本地Qwen2聊天服务 (保留在本地)
-  FABGPT: 5008,         // Defect检测服务起始端口 (远程A100)
-  GUANGKE: 2227,        // 保留原配置
-  TCAD: 5002,           // 本地TCAD RAG服务 (保留在本地)
-  CIRCUITTHINK: 5007,   // Circuit分析服务 (远程A100)
-  RAGMANAGER: 5100,     // RAG负载均衡器端口 (统一入口)
-  LITHO: 2229           // 保留原配置
+  CHATBOT: SERVICE_PORTS.CHATBOT,
+  FABGPT: SERVICE_PORTS.DEFECT,
+  GUANGKE: SERVICE_PORTS.LITHO,
+  TCAD: SERVICE_PORTS.TCAD,
+  CIRCUITTHINK: SERVICE_PORTS.CIRCUIT,
+  RAGMANAGER: SERVICE_PORTS.RAG_MANAGER,
+  LITHO: SERVICE_PORTS.LITHO
 };
 
 /**
- * 负载均衡器端口映射 - 新的端口分配
+ * 历史兼容字段（当前全部改为本机固定端口）
  */
 export const LOAD_BALANCER_PORTS = {
-  RAG: 5100,            // RAG负载均衡器 (原5000)
-  DEFECT: 5101,         // Defect负载均衡器 (原5002)
-  TCAD: 5102,           // TCAD负载均衡器 (原5004)
-  CIRCUIT: 5103,        // Circuit负载均衡器 (原5005)
-  CHATBOT: 5104         // Chatbot负载均衡器 (原5008)
+  RAG: SERVICE_PORTS.RAG_MANAGER,
+  DEFECT: SERVICE_PORTS.DEFECT,
+  TCAD: SERVICE_PORTS.TCAD,
+  CIRCUIT: SERVICE_PORTS.CIRCUIT,
+  CHATBOT: SERVICE_PORTS.CHATBOT
 };
 
 /**
  * 服务器IP配置
  */
 export const SERVER_IPS = {
-  LOCAL: '10.98.64.22',      // 本地服务器
-  REMOTE_A100: '10.98.193.46'  // 远程A100服务器
+  LOCAL: SERVICE_HOST,
+  REMOTE_A100: SERVICE_HOST
 };
 
 /**
- * A100远程服务配置
+ * 历史字段兼容
  */
 export const A100_SERVICES = {
-  // Defect服务 - 8个GPU实例
-  DEFECT_PORTS: [5008, 5018, 5028, 5038, 5048, 5058, 5068, 5078],
-  
-  // RAG服务 - 已迁移到负载均衡器，无需直接访问实例
-  // RAG_PORTS: [5006, 5016, 5026, 5036, 5046, 5056, 5066, 5076], // 废弃：现在通过负载均衡器访问
-  
-  // Circuit服务 - 单实例
-  CIRCUIT_PORT: 5007
+  DEFECT_PORTS: [SERVICE_PORTS.DEFECT],
+  CIRCUIT_PORT: SERVICE_PORTS.CIRCUIT
 };
 
 /**
@@ -56,38 +63,27 @@ export const A100_SERVICES = {
  * @returns {string} 完整的API基础URL
  */
 export const buildApiUrl = (service, useLoadBalancing = false) => {
-  
-  // 本地服务直接返回
-  if (service === 'CHATBOT' || service === 'TCAD') {
-    const port = MODULE_PORTS[service];
-    return `http://${SERVER_IPS.LOCAL}:${port}`;
-  }
-  
-  // 远程A100服务
-  if (service === 'FABGPT') {
-    if (useLoadBalancing) {
-      // 随机选择一个Defect实例
-      const ports = A100_SERVICES.DEFECT_PORTS;
-      const selectedPort = ports[Math.floor(Math.random() * ports.length)];
-      return `http://${SERVER_IPS.REMOTE_A100}:${selectedPort}`;
-    } else {
-      // 使用第一个实例
-      return `http://${SERVER_IPS.REMOTE_A100}:${A100_SERVICES.DEFECT_PORTS[0]}`;
+  switch (service) {
+    case 'CHATBOT':
+      return CHATBOT_BASE_URL;
+    case 'FABGPT':
+      return DEFECT_BASE_URL;
+    case 'GUANGKE':
+    case 'LITHO':
+      return LITHO_BASE_URL;
+    case 'TCAD':
+      return TCAD_BASE_URL;
+    case 'CIRCUITTHINK':
+      return CIRCUIT_BASE_URL;
+    case 'RAGMANAGER':
+      return RAG_MANAGER_BASE_URL;
+    case 'BACKEND':
+      return BACKEND_BASE_URL;
+    default: {
+      const port = MODULE_PORTS[service];
+      return buildBaseUrl(port);
     }
   }
-  
-  if (service === 'RAGMANAGER') {
-    // 直接使用RAG负载均衡器，不需要手动负载均衡
-    return `http://${SERVER_IPS.LOCAL}:${MODULE_PORTS.RAGMANAGER}`;
-  }
-  
-  if (service === 'CIRCUITTHINK') {
-    return `http://${SERVER_IPS.REMOTE_A100}:${A100_SERVICES.CIRCUIT_PORT}`;
-  }
-  
-  // 默认配置
-  const port = MODULE_PORTS[service];
-  return `http://${SERVER_IPS.LOCAL}:${port}`;
 };
 
 /**
@@ -97,17 +93,13 @@ export const buildApiUrl = (service, useLoadBalancing = false) => {
  */
 export const getAllServiceUrls = (service) => {
   if (service === 'FABGPT') {
-    return A100_SERVICES.DEFECT_PORTS.map(port => 
-      `http://${SERVER_IPS.REMOTE_A100}:${port}`
-    );
+    return [DEFECT_BASE_URL];
   }
-  
+
   if (service === 'RAGMANAGER') {
-    // RAG负载均衡器只有一个统一入口
-    return [`http://${SERVER_IPS.LOCAL}:${MODULE_PORTS.RAGMANAGER}`];
+    return [RAG_MANAGER_BASE_URL];
   }
-  
-  // 单实例服务
+
   return [buildApiUrl(service)];
 };
 
@@ -148,9 +140,46 @@ export const createStreamRequest = ({
 }) => {
   const controller = new AbortController();
   const { signal } = controller;
-  
+  let buffer = '';
   let requestId = null;
-  
+  let finished = false;
+
+  const finish = () => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    onComplete && onComplete();
+  };
+
+  const parseStreamData = (jsonData) => {
+    try {
+      return JSON.parse(jsonData);
+    } catch (parseError) {
+      const fixedData = jsonData.replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
+        try {
+          return String.fromCharCode(parseInt(hex, 16));
+        } catch (error) {
+          return match;
+        }
+      });
+
+      try {
+        return JSON.parse(fixedData);
+      } catch (secondError) {
+        const chunkMatch = jsonData.match(/"chunk"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+        if (chunkMatch && chunkMatch[1]) {
+          return {
+            chunk: chunkMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+            is_complete: jsonData.includes('"is_complete":true'),
+            aborted: jsonData.includes('"aborted":true'),
+          };
+        }
+        throw secondError;
+      }
+    }
+  };
+
   const startStream = async () => {
     try {
       const url = `${baseUrl}/stream_generate`;
@@ -169,50 +198,22 @@ export const createStreamRequest = ({
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       const processStream = async ({ done, value }) => {
         if (done) {
-          onComplete && onComplete();
+          finish();
           return;
         }
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n\n');
-        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const jsonData = line.substring(6);
-              let parsedData;
-              
-              try {
-                parsedData = JSON.parse(jsonData);
-              } catch (parseError) {
-                // 尝试修复特殊字符
-                const fixedData = jsonData.replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
-                  try {
-                    return String.fromCharCode(parseInt(hex, 16));
-                  } catch (e) {
-                    return match;
-                  }
-                });
-                
-                try {
-                  parsedData = JSON.parse(fixedData);
-                } catch (secondError) {
-                  // 手动解析chunk字段
-                  const chunkMatch = jsonData.match(/\"chunk\"\\s*:\\s*\"([^\"\\\\]*(?:\\\\.[^\"\\\\]*)*)\"/);
-                  if (chunkMatch && chunkMatch[1]) {
-                    parsedData = {
-                      chunk: chunkMatch[1].replace(/\\\"/g, '\"').replace(/\\\\/g, '\\'),
-                      is_complete: jsonData.includes('\"is_complete\":true'),
-                      aborted: jsonData.includes('\"aborted\":true')
-                    };
-                  } else {
-                    continue;
-                  }
-                }
-              }
+              const parsedData = parseStreamData(jsonData);
 
               // 检查开始标记
               if (parsedData.start_streaming && parsedData.request_id) {
@@ -223,10 +224,10 @@ export const createStreamRequest = ({
               onChunk && onChunk(parsedData);
 
               if (parsedData.is_complete) {
-                onComplete && onComplete();
+                finish();
                 return;
               } else if (parsedData.aborted) {
-                onComplete && onComplete();
+                finish();
                 return;
               }
             } catch (e) {
@@ -259,34 +260,33 @@ export const createStreamRequest = ({
 
   startStream();
 
-  return {
-    cancel: async () => {
-      try {
-        // 通知后端中止请求
-        if (requestId) {
-          try {
-            await fetch(`${baseUrl}/abort_stream`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ request_id: requestId })
-            });
-          } catch (e) {
-            console.error('发送中止请求失败:', e);
-          }
+  const cancel = async () => {
+    try {
+      if (requestId) {
+        try {
+          await fetch(`${baseUrl}/abort_stream`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ request_id: requestId })
+          });
+        } catch (e) {
+          console.error('发送中止请求失败:', e);
         }
-        
-        // 中止fetch请求
-        controller.abort();
-        onComplete && onComplete();
-        return true;
-      } catch (e) {
-        console.error('取消请求时出错:', e);
-        onComplete && onComplete();
-        throw e;
       }
-    },
+
+      controller.abort();
+      return true;
+    } catch (e) {
+      console.error('取消请求时出错:', e);
+      throw e;
+    }
+  };
+
+  return {
+    cancel,
+    abort: cancel,
     getRequestId: () => requestId
   };
 };

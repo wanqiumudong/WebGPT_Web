@@ -1,6 +1,8 @@
 #!/bin/bash
 
-PIDS=`ps -ef | grep "gptserver" | grep -v grep | awk '{print $2}'`
+SERVER_PORT="${WEB_FABGPT_GPTSERVER_PORT:-5107}"
+PROC_PATTERN="gpt-server.jar --server.port=${SERVER_PORT}"
+PIDS=`ps -ef | grep "${PROC_PATTERN}" | grep -v grep | awk '{print $2}'`
 # 判断字符串长度是否为0
 if [ -z "$PIDS" ]; then
     echo "ERROR: The service does not started!"

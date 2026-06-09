@@ -54,6 +54,7 @@ LLM/FabGPT/code/ckpt-daluan/
 # RAG model weights
 LLM/RagManager/models/
 LLM/Mirror/RagManager/models/
+LLM/rag/models/
 
 # Mirror weights / checkpoints
 LLM/Mirror/
@@ -65,6 +66,12 @@ LLM/Mirror/FabGPT/code/ckpt-daluan/
 
 # Litho third-party model weights
 LLM/litho_code/thirdparty/neural_ilt/models/
+LLM/litho/litho_code/thirdparty/neural_ilt/models/
+LLM/circuit/local_models/
+LLM/defect/pretrained_ckpt/
+LLM/defect/code/ckpt/
+LLM/defect/code/ckpt-TCAD/
+LLM/defect/code/ckpt-daluan/
 
 # Generic large model artifact formats
 *.pt
@@ -78,14 +85,18 @@ LLM/litho_code/thirdparty/neural_ilt/models/
 # ------------------------------
 LLM/RagManager/volumes/
 LLM/Mirror/RagManager/volumes/
+LLM/rag/volumes/
 
 # ------------------------------
 # Runtime/generated data directories
 # ------------------------------
 LLM/Circuit_Think/files/
 LLM/Circuit_Think/files_shared/
+LLM/circuit/files/
+LLM/circuit/files_shared/
 LLM/FabGPT/data/
 LLM/FabGPT/code/uploads/
+LLM/defect/code/uploads/
 LLM/Mirror/FabGPT/data/
 LLM/TCAD_code/upload_files/
 LLM/TCAD_code/generate_files/
@@ -94,7 +105,9 @@ LLM/TCAD_code/logs/
 LLM/TCAD_code/.database
 LLM/TCAD_code/STDB/.database
 LLM/TCAD_code/STDB/**/results/
+LLM/tcad/
 LLM/litho_code/upload_image/
+LLM/litho/litho_code/upload_image/
 LLM/**/logs/
 LLM/**/upload_files/
 LLM/**/generate_files/
@@ -107,10 +120,69 @@ LLM/**/png_outputs/
 LLM/litho_code/thirdparty/OpenILT/tmp/
 LLM/litho_code/thirdparty/OpenILT/thirdparty/adaptive-boxes/sample_data/
 LLM/litho_code/thirdparty/neural_ilt/env.zip
+LLM/litho/litho_code/thirdparty/OpenILT/tmp/
+LLM/litho/litho_code/thirdparty/OpenILT/thirdparty/adaptive-boxes/sample_data/
+LLM/litho/litho_code/thirdparty/neural_ilt/env.zip
+LLM/litho/litho_code/thirdparty/neural_ilt/dataset/
+
+# Embedded repositories copied as source/vendor trees
+**/.git/
+**/.git.disabled/
+
+# Local agent/development guidance docs
+**/AGENT.md
+LLM/tcad_agent_core/PLAN.md
+LLM/tcad_agent_core/TASKS.md
+LLM/tcad_agent_core/docs/plans/
 
 # Backups
 bak/
+*.bak
+*.bak_*
+*_bak.py
+*_tmp.py
+LLM/defect/code/=*
+
+# Local reference/demo copies outside the WebGPT deployment tree
+MODULAR-RAG-MCP-SERVER/
+demo_RAG/
+demo_RAG.zip
+docs/
 
 # Tool local settings
 .claude/
 Web/front-end/Code/src/.claude/
+
+# ------------------------------
+# Secrets / local credentials
+# ------------------------------
+.env
+.env.*
+settings.json
+credentials.json
+*.pem
+*.key
+*_secret*
+*_token*
+
+# ------------------------------
+# Python env / test caches
+# ------------------------------
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------
+# TCAD agent runtime / snapshots
+# ------------------------------
+LLM/tcad_agent_core/runtime/
+LLM/tcad_agent_core/.pytest_cache/
+LLM/tcad_agent_core_snapshot_*/
+
+# ------------------------------
+# Local exports / scratch files
+# ------------------------------
+current.png
+*.sqlite
+*.db

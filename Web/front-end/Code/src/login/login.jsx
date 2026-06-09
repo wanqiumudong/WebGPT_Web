@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import { updateUsername } from '../store/userStore'; 
+import { USER_MANAGER_BASE_URL } from '../config/endpoints';
 
 function Login({ checkAuthentication }) {
   const [username, setUsername] = useState("");
@@ -11,36 +12,6 @@ function Login({ checkAuthentication }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
-  // 获取用户状态数据 - 使用单独的状态检查API
-  const getUserStatus = async (username) => {
-    try {
-      // 使用专门的状态检查接口，避免获取完整用户数据
-      const response = await fetch(`http://10.98.64.22:5203/api/users/${username}/status`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const statusData = await response.json();
-        return {
-          status: statusData.status,
-          expireDate: statusData.expireDate,
-          expired: statusData.expired
-        };
-      } else if (response.status === 404) {
-        // 用户不存在，让密码验证来处理
-        return null;
-      } else {
-        return null;
-      }
-    } catch (error) {
-      // 网络错误，允许继续登录流程
-      return null;
-    }
-  };
 
   // 检查用户状态的函数
   const checkUserStatus = (userData) => {
@@ -102,26 +73,27 @@ function Login({ checkAuthentication }) {
     setLoading(true);
 
     try {
-      // 同时进行状态检查和密码验证，避免多次网络请求
-      const [userStatus, loginResponse] = await Promise.all([
-        getUserStatus(username),
-        fetch("http://10.98.64.22:8080/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username, password }),
-        })
-      ]);
+      const loginResponse = await fetch(`${USER_MANAGER_BASE_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-      // 先检查密码是否正确
+      let loginData = null;
+      try {
+        loginData = await loginResponse.json();
+      } catch (error) {
+        loginData = null;
+      }
+
       if (!loginResponse.ok) {
-        window.alert("用户名或密码错误");
+        window.alert(loginData?.message || "用户名或密码错误");
         return;
       }
 
-      // 密码正确后再检查用户状态
-      const statusCheck = checkUserStatus(userStatus);
+      const statusCheck = checkUserStatus(loginData);
       
       if (!statusCheck.isValid) {
         window.alert(statusCheck.message);
@@ -140,6 +112,9 @@ function Login({ checkAuthentication }) {
 
       // 登录成功，设置Cookie并跳转
       Cookies.set('user', username, { expires: 7 });
+      const resolvedUserId = loginData?.userId ? String(loginData.userId) : username;
+      Cookies.set('userid', resolvedUserId, { expires: 7 });
+      Cookies.set('userId', resolvedUserId, { expires: 7 });
       dispatch(updateUsername(username));
       checkAuthentication();
       navigate("/main");
